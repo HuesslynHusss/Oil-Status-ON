@@ -1,0 +1,2295 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#182230" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Oil Status — Control UCO, Rutas, Trampas y Prospectos</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <style>
+    :root {
+      --bg: #f5efe3;
+      --bg-2: #ebe1cf;
+      --card: #fffdf8;
+      --card-soft: #f2ece0;
+      --ink: #182230;
+      --muted: #5c6a7d;
+      --border: #e1d7c4;
+      --border-strong: #cbbd9f;
+      --oil-mid: #9c531e;
+      --oil-light: #c97634;
+      --oil-foam: #e8a263;
+      --teal: #177d74;
+      --teal-soft: #d7f3f0;
+      --red: #cf4237;
+      --red-soft: #fee3e0;
+      --gold-soft: #fceec5;
+      --topbar-bg: rgba(245, 239, 227, 0.92);
+      --shadow-sm: 0 3px 10px rgba(24, 34, 48, 0.05);
+      --shadow-md: 0 12px 26px rgba(24, 34, 48, 0.10);
+      --shadow-lg: 0 18px 40px rgba(24, 34, 48, 0.18);
+    }
+
+    body.dark-mode {
+      --bg: #0e151f;
+      --bg-2: #141e2c;
+      --card: #192434;
+      --card-soft: #213044;
+      --ink: #f3f6fa;
+      --muted: #98a8be;
+      --border: #2a394f;
+      --border-strong: #3b4f6c;
+      --topbar-bg: rgba(14, 21, 31, 0.92);
+      --teal-soft: rgba(23, 125, 116, 0.24);
+      --red-soft: rgba(207, 66, 55, 0.24);
+      --gold-soft: rgba(232, 162, 99, 0.22);
+      --shadow-sm: 0 3px 10px rgba(0, 0, 0, 0.28);
+      --shadow-md: 0 12px 26px rgba(0, 0, 0, 0.42);
+      --shadow-lg: 0 18px 40px rgba(0, 0, 0, 0.58);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background:
+        radial-gradient(circle at 50% 18%, rgba(232, 162, 99, 0.16), transparent 55%),
+        linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
+      color: var(--ink);
+      min-height: 100dvh;
+      padding-bottom: calc(108px + env(safe-area-inset-bottom, 0px));
+      overflow-x: hidden;
+      transition: background 0.25s ease, color 0.25s ease;
+    }
+
+    .app-shell {
+      width: 100%;
+      max-width: 440px;
+      margin: 0 auto;
+      min-height: 100dvh;
+      padding: calc(18px + env(safe-area-inset-top, 0px)) 16px 28px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .app-shell.logged-in {
+      justify-content: flex-start;
+      padding-top: calc(12px + env(safe-area-inset-top, 0px));
+    }
+
+    .auth-screen {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: auto 0;
+    }
+
+    .auth-card {
+      width: 100%;
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: 34px;
+      padding: 24px 20px;
+      box-shadow: var(--shadow-lg);
+      text-align: center;
+    }
+
+    .auth-brand-row {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .pin-dots {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin: 12px 0 6px;
+    }
+
+    .pin-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid var(--border-strong);
+      background: transparent;
+      transition: all 0.16s ease;
+    }
+
+    .pin-dot.filled {
+      background: var(--oil-light);
+      border-color: var(--oil-light);
+      transform: scale(1.15);
+    }
+
+    .token-input {
+      width: 100%;
+      text-align: center;
+      letter-spacing: 0.4em;
+      font-size: 20px;
+      font-weight: 900;
+      padding: 11px 14px;
+      border-radius: 999px;
+      border: 1.5px solid var(--border-strong);
+      background: var(--card-soft);
+      color: var(--ink);
+      outline: none;
+      margin: 6px 0 12px;
+    }
+
+    .token-input:focus {
+      border-color: var(--oil-light);
+    }
+
+    .keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      max-width: 270px;
+      margin: 8px auto 16px;
+    }
+
+    .key-btn {
+      width: 68px;
+      height: 54px;
+      margin: 0 auto;
+      background: var(--card-soft);
+      border: 1.5px solid var(--border);
+      border-radius: 999px;
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--ink);
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .key-btn:active {
+      transform: scale(0.94);
+      background: var(--border);
+    }
+
+    .auth-error {
+      background: var(--red-soft);
+      color: var(--red);
+      border-radius: 999px;
+      padding: 9px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      display: none;
+    }
+
+    .auth-error.show { display: block; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 14px;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      padding: 8px 4px;
+      background: var(--topbar-bg);
+      backdrop-filter: blur(12px);
+      border-radius: 999px;
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-left: 4px;
+      min-width: 0;
+    }
+
+    .brand {
+      font-size: 17px;
+      font-weight: 900;
+      margin: 0;
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .btn-round-add {
+      background: linear-gradient(135deg, var(--oil-light), var(--oil-mid));
+      color: #fff;
+      border: none;
+      border-radius: 999px;
+      padding: 8px 13px;
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(156, 83, 30, 0.24);
+      white-space: nowrap;
+    }
+
+    .btn-round-add:active { transform: scale(0.95); }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: 999px;
+      padding: 7px 11px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--ink);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--teal);
+    }
+
+    .status-pill.offline {
+      background: var(--gold-soft);
+      color: var(--oil-mid);
+    }
+
+    .status-pill.offline .dot { background: #d9822b; }
+
+    .circle-btn {
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border);
+      background: var(--card);
+      color: var(--ink);
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .circle-btn:active { transform: scale(0.94); }
+
+    .drawer-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 15, 22, 0.55);
+      backdrop-filter: blur(3px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.22s ease;
+      z-index: 45;
+    }
+
+    .drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+
+    .right-drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: min(325px, 88vw);
+      height: 100dvh;
+      background: var(--card);
+      border-left: 1.5px solid var(--border);
+      box-shadow: var(--shadow-lg);
+      transform: translateX(100%);
+      transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      padding: 18px 16px 28px;
+      overflow-y: auto;
+    }
+
+    .right-drawer.open { transform: translateX(0); }
+
+    .drawer-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 14px;
+    }
+
+    .profile-box {
+      background: var(--card-soft);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 13px;
+      margin-bottom: 14px;
+    }
+
+    .drawer-section-title {
+      font-size: 10.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin: 12px 0 8px;
+    }
+
+    .drawer-item {
+      width: 100%;
+      background: var(--card-soft);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 10px 14px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--ink);
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .drawer-item:active { transform: scale(0.98); }
+
+    .seg-pills {
+      display: inline-flex;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .seg-pills span {
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    .seg-pills span.on { background: var(--oil-mid); color: #fff; }
+
+    .switch-dot {
+      width: 38px;
+      height: 22px;
+      border-radius: 999px;
+      background: var(--border-strong);
+      position: relative;
+      transition: background 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .switch-dot.on { background: var(--teal); }
+
+    .switch-dot::after {
+      content: "";
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      transition: transform 0.2s ease;
+    }
+
+    .switch-dot.on::after { transform: translateX(16px); }
+
+    .view-anim { animation: viewIn 0.2s ease both; }
+
+    @keyframes viewIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .soft-hero {
+      background: linear-gradient(150deg, #1b2838 0%, #2b3e54 100%);
+      color: #fff;
+      border-radius: 30px;
+      padding: 18px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow-md);
+      text-align: center;
+    }
+
+    .soft-hero h2 { margin: 4px 0 4px; font-size: 20px; }
+    .soft-hero p { margin: 0; font-size: 12px; color: #cbd5e1; }
+
+    .pct-meter-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .meter-box {
+      background: rgba(255, 255, 255, 0.09);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 22px;
+      padding: 12px;
+      cursor: pointer;
+    }
+
+    .meter-val {
+      font-size: 22px;
+      font-weight: 900;
+      color: var(--oil-foam);
+      margin: 3px 0 6px;
+    }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+
+    .card {
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: 26px;
+      padding: 14px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .card.interactive:active { transform: scale(0.99); }
+
+    .card.next-stop {
+      border: 2px solid var(--oil-light);
+    }
+
+    .pill-action {
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: 999px;
+      padding: 10px 10px;
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+      color: var(--ink);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .pill-action:active { transform: scale(0.96); }
+
+    .badge {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .badge-red { background: var(--red-soft); color: var(--red); }
+    .badge-teal { background: var(--teal-soft); color: var(--teal); }
+    .badge-gold { background: var(--gold-soft); color: var(--oil-mid); }
+    body.dark-mode .badge-gold { color: var(--oil-foam); }
+
+    .tank-visual.mini {
+      width: 44px;
+      min-width: 44px;
+      height: 64px;
+      border: 2px solid var(--ink);
+      border-radius: 16px;
+      background: #2b180c;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .tank-liquid {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      background: linear-gradient(180deg, var(--oil-foam) 0%, var(--oil-light) 60%, var(--oil-mid) 100%);
+      transition: height 0.45s ease;
+    }
+
+    .tank-liquid.critical {
+      background: linear-gradient(180deg, #ff9991 0%, var(--red) 70%);
+    }
+
+    .tank-pct {
+      position: relative;
+      z-index: 2;
+      font-weight: 900;
+      font-size: 10px;
+      color: #fff;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75);
+    }
+
+    .progress-bar {
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.15);
+      overflow: hidden;
+    }
+
+    .progress-bar.light { background: var(--bg-2); }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.45s ease;
+    }
+
+    .dirt-track {
+      height: 16px;
+      border-radius: 999px;
+      background: var(--card-soft);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      margin: 8px 0 10px;
+    }
+
+    .dirt-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--oil-foam), var(--oil-mid));
+      transition: width 0.4s ease;
+    }
+
+    .dirt-fill.high-dirt {
+      background: linear-gradient(90deg, #ef6c62, var(--red));
+    }
+
+    #leafletMapBox {
+      width: 100%;
+      height: 230px;
+      border-radius: 26px;
+      border: 1.5px solid var(--border-strong);
+      overflow: hidden;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow-md);
+      background: #142232;
+      z-index: 1;
+    }
+
+    .leaflet-pin-badge {
+      background: var(--card);
+      color: var(--ink);
+      border: 2px solid var(--oil-light);
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 10.5px;
+      font-weight: 800;
+      white-space: nowrap;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+      display: inline-block;
+      transform: translate(-50%, -50%);
+    }
+
+    .leaflet-pin-badge.selected {
+      background: var(--oil-light);
+      color: #fff;
+      border-color: #fff;
+    }
+
+    .leaflet-pin-badge.converted {
+      background: var(--teal);
+      color: #fff;
+      border-color: #fff;
+    }
+
+    .radius-pills {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .radius-pill {
+      flex: 1;
+      padding: 8px 6px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--card-soft);
+      color: var(--ink);
+      font-size: 11.5px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .radius-pill.active {
+      background: var(--oil-mid);
+      color: #fff;
+      border-color: var(--oil-mid);
+    }
+
+    .chain-console {
+      background: linear-gradient(150deg, #1b2838 0%, #2b3e54 100%);
+      color: #fff;
+      border-radius: 28px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow-md);
+    }
+
+    .chain-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .chain-head h3 { margin: 0 0 2px; font-size: 17px; }
+    .chain-head p { margin: 0; font-size: 12px; color: #cbd5e1; }
+
+    .chain-strip {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      margin-bottom: 10px;
+    }
+
+    .chain-chip {
+      background: rgba(255, 255, 255, 0.11);
+      color: #fff;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .chain-chip b { color: var(--oil-foam); }
+
+    .active-stop-banner {
+      background: rgba(255, 255, 255, 0.09);
+      border: 1px solid rgba(232, 162, 99, 0.4);
+      border-radius: 22px;
+      padding: 12px;
+    }
+
+    .input {
+      width: 100%;
+      padding: 11px 14px;
+      border-radius: 999px;
+      border: 1.5px solid var(--border);
+      background: var(--card-soft);
+      font-size: 13px;
+      margin-bottom: 10px;
+      color: var(--ink);
+      outline: none;
+    }
+
+    .input:focus { border-color: var(--oil-light); }
+
+    .btn-primary {
+      width: 100%;
+      background: linear-gradient(135deg, var(--oil-light), var(--oil-mid));
+      color: #fff;
+      border: none;
+      border-radius: 999px;
+      padding: 11px 16px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .btn-primary:active { transform: scale(0.97); }
+
+    .btn-secondary {
+      background: var(--card-soft);
+      border: 1.5px solid var(--border);
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 9px 14px;
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .btn-secondary:active { transform: scale(0.97); }
+
+    .btn-teal {
+      background: linear-gradient(135deg, #21968c, var(--teal));
+      color: #fff;
+      border: none;
+      border-radius: 999px;
+      padding: 9px 14px;
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .btn-red {
+      background: linear-gradient(135deg, #e25348, var(--red));
+      color: #fff;
+      border: none;
+      border-radius: 999px;
+      padding: 9px 14px;
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .dock {
+      position: fixed;
+      bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 24px);
+      max-width: 430px;
+      background: #182230;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 999px;
+      padding: 5px;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 3px;
+      z-index: 25;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .dock.hidden { display: none; }
+
+    .dock button {
+      background: transparent;
+      color: #c4cfdd;
+      border: none;
+      border-radius: 999px;
+      padding: 9px 4px;
+      font-weight: 700;
+      font-size: 10.5px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .dock button.active {
+      background: linear-gradient(135deg, var(--oil-light), var(--oil-mid));
+      color: #fff;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 15, 22, 0.62);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 60;
+    }
+
+    .modal-backdrop.open { display: flex; }
+
+    .modal-box {
+      width: 100%;
+      max-width: 410px;
+      max-height: 86dvh;
+      overflow-y: auto;
+      background: var(--card);
+      color: var(--ink);
+      border-radius: 28px;
+      padding: 18px;
+      border: 1.5px solid var(--border);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .mini-menu-btn {
+      width: 100%;
+      background: var(--card-soft);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 11px 15px;
+      margin-bottom: 8px;
+      color: var(--ink);
+      font-weight: 700;
+      font-size: 12.5px;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .user-row-card {
+      background: var(--card-soft);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+
+    .toast-msg {
+      position: fixed;
+      top: calc(64px + env(safe-area-inset-top, 0px));
+      left: 50%;
+      transform: translateX(-50%) translateY(-10px);
+      background: #182230;
+      color: #fff;
+      padding: 8px 15px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.22s ease;
+      z-index: 70;
+      white-space: nowrap;
+      box-shadow: var(--shadow-md);
+    }
+
+    .toast-msg.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .row-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .row-actions > * { flex: 1; }
+    .muted { color: var(--muted); font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div id="toastMsg" class="toast-msg"></div>
+  <input id="importJsonFile" type="file" accept="application/json,.json" style="display:none;" onchange="handleImportJson(event)" />
+
+  <div id="drawerBackdrop" class="drawer-backdrop" onclick="closeDrawer()"></div>
+  <aside id="rightDrawer" class="right-drawer" aria-label="Menú lateral">
+    <div class="drawer-top">
+      <strong style="font-size:15px;">Menú &amp; Ajustes</strong>
+      <button class="circle-btn" onclick="closeDrawer()">✕</button>
+    </div>
+
+    <div class="profile-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <strong id="drawerUserName" style="font-size:14px;">Administrador</strong>
+        <span id="drawerRoleBadge" class="badge badge-gold">ADMIN • 4200</span>
+      </div>
+      <div id="drawerUserInfo" class="muted" style="margin-bottom:8px;">Control total activo</div>
+      <button class="btn-secondary" style="width:100%;" onclick="openProfileModal()">Editar mi perfil</button>
+    </div>
+
+    <div id="adminUsersSection">
+      <div class="drawer-section-title">Usuarios Registrados</div>
+      <button class="drawer-item" onclick="openUsersManagerModal()">
+        <span>👥 Ver y administrar usuarios (<span id="usersCountLabel">2</span>)</span>
+        <span>›</span>
+      </button>
+      <button class="drawer-item" onclick="openNewUserModal()">
+        <span>➕ Crear nuevo usuario</span>
+        <span>+</span>
+      </button>
+    </div>
+
+    <div class="drawer-section-title">Apariencia</div>
+
+    <button class="drawer-item" onclick="toggleDarkMode()">
+      <span>Tema: <strong id="themeLabel">Claro</strong></span>
+      <span id="themeSwitch" class="switch-dot"></span>
+    </button>
+
+    <button class="drawer-item" onclick="toggleUnit()">
+      <span>Volumen: <strong id="unitLabel">Galones</strong></span>
+      <span class="seg-pills">
+        <span id="unitGal" class="on">GAL</span>
+        <span id="unitL">L</span>
+      </span>
+    </button>
+
+    <div class="drawer-section-title">Respaldo y Sesión</div>
+
+    <button class="drawer-item" onclick="manualSaveProgress()">
+      <span>💾 Guardar progreso</span>
+      <span id="lastSavedLabel" class="muted" style="font-size:11px;">Listo</span>
+    </button>
+
+    <button class="drawer-item" onclick="exportProgressJson()">
+      <span>⬇️ Respaldar (.json)</span>
+      <span>JSON</span>
+    </button>
+
+    <button class="drawer-item" onclick="document.getElementById('importJsonFile').click()">
+      <span>⬆️ Restaurar (.json)</span>
+      <span>📂</span>
+    </button>
+
+    <button class="drawer-item" onclick="lockSession()">
+      <span style="color:var(--red);">🔒 Cerrar sesión</span>
+      <span>›</span>
+    </button>
+  </aside>
+
+  <div id="appShell" class="app-shell">
+    <div id="topBar" class="topbar" style="display:none;">
+      <div class="brand-wrap">
+        <svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <rect width="32" height="32" rx="16" fill="#182230"/>
+          <path d="M16 6.5C16 6.5 9.5 14.2 9.5 19.2C9.5 22.8 12.4 25.5 16 25.5C19.6 25.5 22.5 22.8 22.5 19.2C22.5 14.2 16 6.5 16 6.5Z" fill="#e8a263"/>
+        </svg>
+        <h1 class="brand">Oil Status</h1>
+      </div>
+      <div class="top-actions">
+        <button id="btnTopAdd" class="btn-round-add" onclick="openAddModal()">+Añadir</button>
+        <button id="netBtn" class="status-pill" onclick="toggleNetwork()">
+          <span class="dot"></span>
+          <span id="netLabel">Online</span>
+        </button>
+        <button class="circle-btn" onclick="openDrawer()" aria-label="Abrir menú">☰</button>
+      </div>
+    </div>
+
+    <div id="viewContainer" class="view-anim"></div>
+  </div>
+
+  <div id="bottomDock" class="dock hidden">
+    <button id="tab-inicio" class="active" onclick="setTab('inicio')">Inicio</button>
+    <button id="tab-tanques" onclick="setTab('tanques')">Tanques</button>
+    <button id="tab-rutas" onclick="setTab('rutas')">Rutas</button>
+    <button id="tab-trampas" onclick="setTab('trampas')">Trampas</button>
+    <button id="tab-clientes" onclick="setTab('clientes')">Clientes</button>
+  </div>
+
+  <div id="usersManagerModal" class="modal-backdrop" onclick="if(event.target===this)closeUsersManagerModal()">
+    <div id="usersManagerContent" class="modal-box"></div>
+  </div>
+
+  <div id="newUserModal" class="modal-backdrop" onclick="if(event.target===this)closeNewUserModal()">
+    <div class="modal-box">
+      <h3 style="margin-top:0;">Nuevo usuario</h3>
+      <input id="nuName" class="input" placeholder="Nombre del usuario (ej. Operador Ruta)" />
+      <input id="nuPin" class="input" inputmode="numeric" maxlength="6" placeholder="PIN de acceso (ej. 1020)" />
+      <input id="nuNote" class="input" placeholder="Nota o zona (ej. Ruta Norte)" />
+      <div class="row-actions">
+        <button class="btn-secondary" onclick="closeNewUserModal()">Cancelar</button>
+        <button class="btn-primary" style="width:auto;" onclick="createRegisteredUser()">Crear</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="pickupModal" class="modal-backdrop" onclick="if(event.target===this)closePickupModal()">
+    <div class="modal-box">
+      <span class="badge badge-teal">RECOGIDA</span>
+      <h3 id="pmTitle" style="margin:6px 0 4px;">Recoger tanque</h3>
+      <p id="pmSub" class="muted" style="margin:0 0 12px;"></p>
+      <input id="pmAmountInput" class="input" type="number" min="0" step="0.5" oninput="syncPickupSlider(this.value)" />
+      <input id="pmAmountSlider" type="range" min="0" max="200" step="0.5" style="width:100%;accent-color:var(--teal);margin-bottom:8px;" oninput="syncPickupInput(this.value)" />
+      <div class="row-actions" style="margin-top:0;margin-bottom:10px;">
+        <button type="button" class="btn-secondary" onclick="setPickupRatio(0.25)">25%</button>
+        <button type="button" class="btn-secondary" onclick="setPickupRatio(0.5)">50%</button>
+        <button type="button" class="btn-secondary" onclick="setPickupRatio(0.75)">75%</button>
+        <button type="button" class="btn-secondary" onclick="setPickupRatio(1)">Todo</button>
+      </div>
+      <div class="row-actions">
+        <button type="button" class="btn-secondary" onclick="closePickupModal()">Cancelar</button>
+        <button type="button" class="btn-teal" onclick="confirmManualPickup()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="tankMenuModal" class="modal-backdrop" onclick="if(event.target===this)closeTankMenu()">
+    <div class="modal-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <span id="tmBadge" class="badge badge-gold">0%</span>
+        <span id="tmCode" class="muted">OIL-0000</span>
+      </div>
+      <h3 id="tmTitle" style="margin:4px 0 2px;">Tanque</h3>
+      <p id="tmSub" class="muted" style="margin:0 0 12px;"></p>
+
+      <button class="mini-menu-btn" onclick="tmActionCollect()">
+        <span style="color:var(--teal);">🛢️ Registrar recogida</span>
+        <span>›</span>
+      </button>
+      <button id="tmSimBtn" class="mini-menu-btn" onclick="tmActionSim()">
+        <span>📊 Ajustar nivel (Admin)</span>
+        <span>›</span>
+      </button>
+      <button class="mini-menu-btn" onclick="tmActionGpsSingle()">
+        <span>🧭 Ir en GPS</span>
+        <span>›</span>
+      </button>
+      <button class="btn-secondary" style="width:100%;margin-top:6px;" onclick="closeTankMenu()">Cerrar</button>
+    </div>
+  </div>
+
+  <div id="profileModal" class="modal-backdrop" onclick="if(event.target===this)closeProfileModal()">
+    <div class="modal-box">
+      <h3 style="margin-top:0;">Editar perfil</h3>
+      <input id="pNameInput" class="input" placeholder="Tu nombre" />
+      <input id="pInfoInput" class="input" placeholder="Nota o área" />
+      <div class="row-actions">
+        <button class="btn-secondary" onclick="closeProfileModal()">Cancelar</button>
+        <button class="btn-primary" style="width:auto;" onclick="saveProfile()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="addModal" class="modal-backdrop" onclick="if(event.target===this)closeAddModal()">
+    <div class="modal-box">
+      <h3 style="margin-top:0;">+Añadir locación</h3>
+      <input id="fName" class="input" placeholder="Nombre del restaurante" />
+      <input id="fAddr" class="input" placeholder="Dirección" />
+      <input id="fTankCode" class="input" placeholder="Código tanque (ej. OIL-0005)" />
+      <div class="grid-2" style="margin-bottom:0;">
+        <input id="fCap" class="input" type="number" min="10" placeholder="Capacidad (Gal)" />
+        <input id="fCur" class="input" type="number" min="0" placeholder="Volumen actual" />
+      </div>
+      <div class="grid-2" style="margin-bottom:0;">
+        <input id="fRate" class="input" type="number" step="0.5" min="0.5" placeholder="Ritmo / día" />
+        <input id="fMiles" class="input" type="number" step="0.5" min="0.5" placeholder="Distancia (mi)" />
+      </div>
+      <input id="fTrap" class="input" placeholder="Cód. trampa (opcional)" />
+      <div class="row-actions">
+        <button class="btn-secondary" onclick="closeAddModal()">Cancelar</button>
+        <button class="btn-primary" style="width:auto;" onclick="saveNewLocation()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="simModal" class="modal-backdrop" onclick="if(event.target===this)closeSimModal()">
+    <div class="modal-box">
+      <h3 id="simTitle" style="margin-top:0;">Ajustar nivel</h3>
+      <p id="simSub" class="muted"></p>
+      <input id="simGalInput" class="input" type="number" min="0" step="0.5" oninput="syncSimSlider(this.value)" />
+      <input id="simGalSlider" type="range" min="0" max="200" step="0.5" style="width:100%;accent-color:var(--oil-mid);margin-bottom:8px;" oninput="syncSimInput(this.value)" />
+      <div class="row-actions">
+        <button type="button" class="btn-secondary" onclick="closeSimModal()">Cerrar</button>
+        <button type="button" class="btn-primary" style="width:auto;" onclick="applySimGal()">Aplicar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script>
+    const MASTER_ADMIN_PIN = "4200";
+    const DEFAULT_USER_PIN = "0001";
+    const TRAP_CYCLE_DAYS = 60;
+    const GAL_TO_L = 3.78541;
+    const STORAGE_KEY = "oil_status_v9_state";
+
+    let currentSession = null; // { id, name, role, pin, note }
+    let tokenBuffer = "";
+    let tokenError = false;
+
+    let registeredUsers = [
+      { id: "USR-ADMIN", name: "Dueño / Admin", role: "admin", pin: MASTER_ADMIN_PIN, note: "Control total de la app", active: true },
+      { id: "USR-1", name: "Usuario Operativo", role: "user", pin: DEFAULT_USER_PIN, note: "Acceso limitado estándar", active: true }
+    ];
+
+    let currentTab = "inicio";
+    let isOnline = true;
+    let onlyCritical = false;
+    let searchQuery = "";
+    let prospectQuery = "";
+    let radiusFilterMi = 5;
+    let selectedProspectId = "PR-1";
+    let userCoords = { lat: 40.7128, lon: -74.0060 };
+    let userCoordsText = "Ubicación base lista";
+    let lastSavedAt = "Listo";
+
+    let simTargetId = null;
+    let pickupTargetId = null;
+    let tankMenuId = null;
+    let excludedRouteIds = [];
+    let totalCollectedGal = 0;
+    let pickupsCount = 0;
+
+    let leafletMap = null;
+    let leafletCircle = null;
+    let leafletMarkers = [];
+
+    let appPrefs = {
+      dark: false,
+      unit: "gal"
+    };
+
+    function isAdmin() {
+      return Boolean(currentSession && currentSession.role === "admin");
+    }
+
+    function createInitialProspects() {
+      return [
+        { id: "PR-1", name: "El Fogón Criollo", category: "Frituras & Carnes", address: "Av. del Sol 215", miles: 0.9, estOilGal: 45, dLat: 0.009, dLon: -0.011, converted: false },
+        { id: "PR-2", name: "Pollo Dorado Express", category: "Pollo frito", address: "Calle 18 #74", miles: 1.6, estOilGal: 60, dLat: 0.014, dLon: 0.013, converted: false },
+        { id: "PR-3", name: "Tacos & Empanadas Norte", category: "Comida rápida", address: "Blvd. Libertad 310", miles: 2.7, estOilGal: 35, dLat: -0.018, dLon: -0.016, converted: false },
+        { id: "PR-4", name: "Parrilla El Mirador", category: "Restaurante familiar", address: "Carrera 40 #19", miles: 4.1, estOilGal: 55, dLat: -0.015, dLon: 0.025, converted: false }
+      ];
+    }
+
+    let prospects = createInitialProspects();
+
+    function createInitialLocations() {
+      return [
+        {
+          id: "LOC-1", code: "OIL-0004", name: "Food Express", address: "Calle 9 #120",
+          capacityGal: 100, actualGal: 92, ratePerDay: 18.0, miles: 1.8, collectedToday: false,
+          trap: { code: "TG-102", lastClean: "Hace 48 días", daysSince: 48, cleanedStatus: "pending", reason: "" }
+        },
+        {
+          id: "LOC-2", code: "OIL-0001", name: "Bella Vista Restaurant", address: "Av. Principal 450",
+          capacityGal: 200, actualGal: 150, ratePerDay: 24.0, miles: 3.1, collectedToday: false,
+          trap: { code: "TG-101", lastClean: "Hace 22 días", daysSince: 22, cleanedStatus: "pending", reason: "" }
+        },
+        {
+          id: "LOC-3", code: "OIL-0003", name: "La Cocina Latina", address: "Boulevard Central 88",
+          capacityGal: 150, actualGal: 93, ratePerDay: 15.0, miles: 5.2, collectedToday: false,
+          trap: { code: "TG-103", lastClean: "Hace 56 días", daysSince: 56, cleanedStatus: "pending", reason: "" }
+        }
+      ];
+    }
+
+    let locations = createInitialLocations();
+
+    let activityLog = [
+      { badge: "OIL-0004 • 92%", cls: "badge-red", time: "Hoy", text: "Food Express — Nivel alto en tanque" },
+      { badge: "SISTEMA", cls: "badge-teal", time: "Hoy", text: "Control de tanques, rutas y trampas listo" }
+    ];
+
+    function esc(str) {
+      return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function buildSnapshotPayload() {
+      return {
+        appPrefs,
+        registeredUsers,
+        locations,
+        prospects,
+        activityLog,
+        isOnline,
+        excludedRouteIds,
+        totalCollectedGal,
+        pickupsCount,
+        currentTab,
+        radiusFilterMi,
+        selectedProspectId,
+        userCoords,
+        userCoordsText,
+        lastSavedAt
+      };
+    }
+
+    function saveState() {
+      try {
+        lastSavedAt = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(buildSnapshotPayload()));
+        const lbl = document.getElementById("lastSavedLabel");
+        if (lbl) lbl.textContent = lastSavedAt;
+      } catch (e) {}
+    }
+
+    function manualSaveProgress() {
+      saveState();
+      notify(`Guardado (${lastSavedAt})`);
+    }
+
+    function exportProgressJson() {
+      saveState();
+      const blob = new Blob([JSON.stringify(buildSnapshotPayload(), null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `oil-status-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      closeDrawer();
+      notify("Respaldo .json exportado");
+    }
+
+    function handleImportJson(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const parsed = JSON.parse(String(e.target.result || "{}"));
+          applyLoadedData(parsed);
+          saveState();
+          syncDrawerUI();
+          closeDrawer();
+          render(true);
+          notify("Respaldo restaurado");
+        } catch (err) {
+          notify("Archivo .json inválido");
+        }
+        event.target.value = "";
+      };
+      reader.readAsText(file);
+    }
+
+    function applyLoadedData(parsed) {
+      if (!parsed || typeof parsed !== "object") return;
+      if (parsed.appPrefs) appPrefs = { ...appPrefs, ...parsed.appPrefs };
+      if (Array.isArray(parsed.registeredUsers) && parsed.registeredUsers.length) {
+        registeredUsers = parsed.registeredUsers.map(u => {
+          if (u.role === "admin") return { ...u, pin: MASTER_ADMIN_PIN };
+          return u;
+        });
+        if (!registeredUsers.some(u => u.role === "admin")) {
+          registeredUsers.unshift({
+            id: "USR-ADMIN", name: "Dueño / Admin", role: "admin", pin: MASTER_ADMIN_PIN, note: "Control total de la app", active: true
+          });
+        }
+      }
+      if (Array.isArray(parsed.locations) && parsed.locations.length) locations = parsed.locations;
+      if (Array.isArray(parsed.prospects) && parsed.prospects.length) prospects = parsed.prospects;
+      if (Array.isArray(parsed.activityLog) && parsed.activityLog.length) activityLog = parsed.activityLog;
+      if (typeof parsed.isOnline === "boolean") isOnline = parsed.isOnline;
+      if (Array.isArray(parsed.excludedRouteIds)) excludedRouteIds = parsed.excludedRouteIds;
+      if (typeof parsed.totalCollectedGal === "number") totalCollectedGal = parsed.totalCollectedGal;
+      if (typeof parsed.pickupsCount === "number") pickupsCount = parsed.pickupsCount;
+      if (typeof parsed.currentTab === "string") currentTab = parsed.currentTab;
+      if (typeof parsed.radiusFilterMi === "number") radiusFilterMi = parsed.radiusFilterMi;
+      if (typeof parsed.selectedProspectId === "string") selectedProspectId = parsed.selectedProspectId;
+      if (parsed.userCoords && typeof parsed.userCoords.lat === "number" && typeof parsed.userCoords.lon === "number") {
+        userCoords = parsed.userCoords;
+      }
+      if (typeof parsed.userCoordsText === "string") userCoordsText = parsed.userCoordsText;
+      if (typeof parsed.lastSavedAt === "string") lastSavedAt = parsed.lastSavedAt;
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY)
+          || localStorage.getItem("oil_status_v8_state")
+          || localStorage.getItem("oil_status_v7_state");
+        if (raw) applyLoadedData(JSON.parse(raw));
+      } catch (e) {}
+    }
+
+    function findUserByPin(pin) {
+      const clean = String(pin || "").trim();
+      if (!clean) return null;
+      if (clean === MASTER_ADMIN_PIN) {
+        return registeredUsers.find(u => u.role === "admin") || {
+          id: "USR-ADMIN", name: "Dueño / Admin", role: "admin", pin: MASTER_ADMIN_PIN, note: "Control total", active: true
+        };
+      }
+      return registeredUsers.find(u => u.role !== "admin" && u.active !== false && u.pin === clean) || null;
+    }
+
+    function pressKey(digit) {
+      if (tokenBuffer.length >= 6) return;
+      tokenBuffer += String(digit);
+      tokenError = false;
+      render();
+      if (tokenBuffer.length === 4) submitTokenPin();
+    }
+
+    function backspaceKey() {
+      tokenBuffer = tokenBuffer.slice(0, -1);
+      tokenError = false;
+      render();
+    }
+
+    function clearKey() {
+      tokenBuffer = "";
+      tokenError = false;
+      render();
+    }
+
+    function onTokenInput(val) {
+      tokenBuffer = String(val || "").replace(/\D/g, "").slice(0, 6);
+      tokenError = false;
+    }
+
+    function submitTokenPin(e) {
+      if (e) e.preventDefault();
+      const inputEl = document.getElementById("adminTokenInput");
+      const val = inputEl ? inputEl.value.trim() : tokenBuffer;
+      const matched = findUserByPin(val);
+      if (matched) {
+        currentSession = matched;
+        if (!isAdmin() && currentTab === "clientes") currentTab = "inicio";
+        tokenBuffer = "";
+        tokenError = false;
+        syncDrawerUI();
+        render(true);
+        notify(isAdmin() ? `Admin activo: ${matched.name}` : `Bienvenido: ${matched.name}`);
+      } else {
+        tokenError = true;
+        tokenBuffer = "";
+        render();
+      }
+    }
+
+    function lockSession() {
+      saveState();
+      destroyLeafletMap();
+      currentSession = null;
+      tokenBuffer = "";
+      tokenError = false;
+      closeDrawer();
+      render(true);
+      notify("Sesión cerrada");
+    }
+
+    function renderAuthGate() {
+      const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "C", "0", "⌫"];
+      const dots = [0, 1, 2, 3].map(i => `<span class="pin-dot ${i < tokenBuffer.length ? "filled" : ""}"></span>`).join("");
+      return `
+        <div class="auth-screen">
+          <div class="auth-card">
+            <div class="auth-brand-row">
+              <svg width="44" height="44" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                <rect width="32" height="32" rx="16" fill="#182230"/>
+                <path d="M16 6.5C16 6.5 9.5 14.2 9.5 19.2C9.5 22.8 12.4 25.5 16 25.5C19.6 25.5 22.5 22.8 22.5 19.2C22.5 14.2 16 6.5 16 6.5Z" fill="#e8a263"/>
+                <circle cx="13.5" cy="19.5" r="1.8" fill="#fffdf8"/>
+              </svg>
+              <h2 style="margin:0;font-size:22px;font-weight:900;">Oil Status</h2>
+              <span class="badge badge-gold">ACCESO POR PIN</span>
+            </div>
+
+            <p class="muted" style="margin:0 0 6px;">Ingresa tu PIN para entrar</p>
+            <div class="pin-dots">${dots}</div>
+
+            <div class="auth-error ${tokenError ? "show" : ""}">PIN incorrecto o desactivado.</div>
+
+            <form onsubmit="submitTokenPin(event)">
+              <input
+                id="adminTokenInput"
+                class="token-input"
+                type="password"
+                inputmode="numeric"
+                maxlength="6"
+                placeholder="PIN"
+                value="${esc(tokenBuffer)}"
+                oninput="onTokenInput(this.value)"
+                autocomplete="off"
+              />
+
+              <div class="keypad">
+                ${keys.map(k => {
+                  if (k === "C") return `<button type="button" class="key-btn" onclick="clearKey()">C</button>`;
+                  if (k === "⌫") return `<button type="button" class="key-btn" onclick="backspaceKey()">⌫</button>`;
+                  return `<button type="button" class="key-btn" onclick="pressKey('${k}')">${k}</button>`;
+                }).join("")}
+              </div>
+
+              <button type="submit" class="btn-primary">Entrar</button>
+            </form>
+          </div>
+        </div>
+      `;
+    }
+
+    function openUsersManagerModal() {
+      if (!isAdmin()) return;
+      closeDrawer();
+      renderUsersManagerHtml();
+      document.getElementById("usersManagerModal").classList.add("open");
+    }
+
+    function closeUsersManagerModal() {
+      document.getElementById("usersManagerModal").classList.remove("open");
+    }
+
+    function renderUsersManagerHtml() {
+      const box = document.getElementById("usersManagerContent");
+      if (!box) return;
+      box.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <h3 style="margin:0;">Usuarios Registrados</h3>
+          <button class="circle-btn" onclick="closeUsersManagerModal()">✕</button>
+        </div>
+        <p class="muted" style="margin:0 0 12px;">El PIN 4200 es exclusivo de administración. Los usuarios normales tienen funciones limitadas.</p>
+
+        ${registeredUsers.map(u => {
+          const isMaster = u.role === "admin";
+          return `
+            <div class="user-row-card">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:4px;">
+                <strong>${esc(u.name)}</strong>
+                <span class="badge ${isMaster ? "badge-gold" : u.active !== false ? "badge-teal" : "badge-red"}">
+                  ${isMaster ? "ADMIN • 4200" : (u.active !== false ? `PIN ${esc(u.pin)}` : "INACTIVO")}
+                </span>
+              </div>
+              <div class="muted" style="margin-bottom:8px;">${esc(u.note || "Sin nota")} • ${isMaster ? "Control total" : "Acceso limitado"}</div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <button class="btn-secondary" style="padding:6px 10px;font-size:11px;" onclick="viewUserInfo('${u.id}')">Ver info</button>
+                ${!isMaster ? `
+                  <button class="btn-secondary" style="padding:6px 10px;font-size:11px;" onclick="changeUserPinPrompt('${u.id}')">Cambiar PIN</button>
+                  <button class="btn-secondary" style="padding:6px 10px;font-size:11px;" onclick="toggleUserActive('${u.id}')">
+                    ${u.active !== false ? "Desactivar" : "Activar"}
+                  </button>
+                  <button class="btn-red" style="padding:6px 10px;font-size:11px;" onclick="deleteRegisteredUser('${u.id}')">Borrar</button>
+                ` : ""}
+              </div>
+            </div>
+          `;
+        }).join("")}
+
+        <button class="btn-primary" style="margin-top:6px;" onclick="closeUsersManagerModal(); openNewUserModal();">+ Nuevo usuario</button>
+      `;
+    }
+
+    function viewUserInfo(id) {
+      const u = registeredUsers.find(x => x.id === id);
+      if (!u) return;
+      alert(
+        `Usuario: ${u.name}
+` +
+        `Rol: ${u.role === "admin" ? "Administrador (Control Total)" : "Usuario (Limitado)"}
+` +
+        `PIN: ${u.pin}
+` +
+        `Estado: ${u.active !== false ? "Activo" : "Inactivo"}
+` +
+        `Nota: ${u.note || "—"}`
+      );
+    }
+
+    function changeUserPinPrompt(id) {
+      if (!isAdmin()) return;
+      const u = registeredUsers.find(x => x.id === id);
+      if (!u || u.role === "admin") return;
+      const nextPin = prompt(`Nuevo PIN para ${u.name} (distinto de ${MASTER_ADMIN_PIN}):`, u.pin);
+      if (!nextPin) return;
+      const cleaned = nextPin.trim();
+      if (cleaned.length < 4 || cleaned === MASTER_ADMIN_PIN) {
+        notify("Usa un PIN de 4+ dígitos distinto a 4200");
+        return;
+      }
+      u.pin = cleaned;
+      saveState();
+      renderUsersManagerHtml();
+      notify(`PIN actualizado para ${u.name}`);
+    }
+
+    function toggleUserActive(id) {
+      if (!isAdmin()) return;
+      const u = registeredUsers.find(x => x.id === id);
+      if (!u || u.role === "admin") return;
+      u.active = u.active === false ? true : false;
+      saveState();
+      renderUsersManagerHtml();
+      notify(u.active ? "Usuario activado" : "Usuario desactivado");
+    }
+
+    function deleteRegisteredUser(id) {
+      if (!isAdmin()) return;
+      const u = registeredUsers.find(x => x.id === id);
+      if (!u || u.role === "admin") return;
+      registeredUsers = registeredUsers.filter(x => x.id !== id);
+      saveState();
+      renderUsersManagerHtml();
+      syncDrawerUI();
+      notify("Usuario eliminado");
+    }
+
+    function openNewUserModal() {
+      if (!isAdmin()) return;
+      closeDrawer();
+      document.getElementById("nuName").value = "";
+      document.getElementById("nuPin").value = "";
+      document.getElementById("nuNote").value = "";
+      document.getElementById("newUserModal").classList.add("open");
+    }
+
+    function closeNewUserModal() {
+      document.getElementById("newUserModal").classList.remove("open");
+    }
+
+    function createRegisteredUser() {
+      if (!isAdmin()) return;
+      const name = document.getElementById("nuName").value.trim();
+      const pin = document.getElementById("nuPin").value.trim();
+      const note = document.getElementById("nuNote").value.trim() || "Acceso limitado";
+      if (!name || pin.length < 4 || pin === MASTER_ADMIN_PIN) {
+        notify("Escribe nombre y un PIN de 4+ dígitos distinto a 4200");
+        return;
+      }
+      registeredUsers.push({
+        id: "USR-" + Date.now(),
+        name,
+        role: "user",
+        pin,
+        note,
+        active: true
+      });
+      saveState();
+      closeNewUserModal();
+      syncDrawerUI();
+      notify(`Usuario ${name} creado (PIN ${pin})`);
+    }
+
+    function openDrawer() {
+      syncDrawerUI();
+      document.getElementById("drawerBackdrop").classList.add("open");
+      document.getElementById("rightDrawer").classList.add("open");
+    }
+
+    function closeDrawer() {
+      document.getElementById("drawerBackdrop").classList.remove("open");
+      document.getElementById("rightDrawer").classList.remove("open");
+    }
+
+    function syncDrawerUI() {
+      document.body.classList.toggle("dark-mode", appPrefs.dark);
+      const admin = isAdmin();
+
+      if (currentSession) {
+        document.getElementById("drawerUserName").textContent = currentSession.name;
+        document.getElementById("drawerUserInfo").textContent = currentSession.note || (admin ? "Control total" : "Funciones limitadas");
+        const badge = document.getElementById("drawerRoleBadge");
+        badge.textContent = admin ? "ADMIN • 4200" : `USUARIO • ${currentSession.pin}`;
+        badge.className = `badge ${admin ? "badge-gold" : "badge-teal"}`;
+      }
+
+      const adminSec = document.getElementById("adminUsersSection");
+      if (adminSec) adminSec.style.display = admin ? "block" : "none";
+
+      const countLbl = document.getElementById("usersCountLabel");
+      if (countLbl) countLbl.textContent = String(registeredUsers.length);
+
+      const savedLbl = document.getElementById("lastSavedLabel");
+      if (savedLbl) savedLbl.textContent = lastSavedAt;
+
+      document.getElementById("themeLabel").textContent = appPrefs.dark ? "Oscuro" : "Claro";
+      document.getElementById("themeSwitch").classList.toggle("on", appPrefs.dark);
+
+      const isL = appPrefs.unit === "l";
+      document.getElementById("unitLabel").textContent = isL ? "Litros" : "Galones";
+      document.getElementById("unitGal").classList.toggle("on", !isL);
+      document.getElementById("unitL").classList.toggle("on", isL);
+
+      const addBtn = document.getElementById("btnTopAdd");
+      if (addBtn) addBtn.style.display = admin ? "inline-flex" : "none";
+
+      const tabCli = document.getElementById("tab-clientes");
+      if (tabCli) tabCli.style.display = admin ? "block" : "none";
+
+      const dock = document.getElementById("bottomDock");
+      if (dock) dock.style.gridTemplateColumns = admin ? "repeat(5, 1fr)" : "repeat(4, 1fr)";
+
+      const netBtn = document.getElementById("netBtn");
+      const netLabel = document.getElementById("netLabel");
+      if (netBtn && netLabel) {
+        netBtn.classList.toggle("offline", !isOnline);
+        netLabel.textContent = isOnline ? "Online" : "Offline";
+      }
+
+      document.querySelectorAll(".dock button").forEach(b => b.classList.remove("active"));
+      const activeBtn = document.getElementById("tab-" + currentTab);
+      if (activeBtn) activeBtn.classList.add("active");
+    }
+
+    function toggleDarkMode() {
+      appPrefs.dark = !appPrefs.dark;
+      saveState();
+      syncDrawerUI();
+    }
+
+    function toggleUnit() {
+      appPrefs.unit = appPrefs.unit === "gal" ? "l" : "gal";
+      saveState();
+      syncDrawerUI();
+      render();
+    }
+
+    function openProfileModal() {
+      if (!currentSession) return;
+      closeDrawer();
+      document.getElementById("pNameInput").value = currentSession.name;
+      document.getElementById("pInfoInput").value = currentSession.note || "";
+      document.getElementById("profileModal").classList.add("open");
+    }
+
+    function closeProfileModal() {
+      document.getElementById("profileModal").classList.remove("open");
+    }
+
+    function saveProfile() {
+      if (!currentSession) return;
+      const n = document.getElementById("pNameInput").value.trim();
+      const info = document.getElementById("pInfoInput").value.trim();
+      if (n) currentSession.name = n;
+      currentSession.note = info;
+      const idx = registeredUsers.findIndex(u => u.id === currentSession.id);
+      if (idx >= 0) {
+        registeredUsers[idx].name = currentSession.name;
+        registeredUsers[idx].note = currentSession.note;
+      }
+      saveState();
+      syncDrawerUI();
+      closeProfileModal();
+      render();
+      notify("Perfil actualizado");
+    }
+
+    function calcTank(loc) {
+      const pct = Math.max(0, Math.min(100, Math.round((loc.actualGal / loc.capacityGal) * 100)));
+      const avail = Math.max(0, loc.capacityGal - loc.actualGal);
+      const daysLeft = loc.ratePerDay > 0 ? (avail / loc.ratePerDay).toFixed(1) : "—";
+      return { pct, daysLeft, critical: pct >= 90 };
+    }
+
+    function calcTrapDirtPct(trap) {
+      if (!trap) return 0;
+      if (trap.cleanedStatus === "cleaned" || trap.daysSince <= 0) return 0;
+      return Math.max(5, Math.min(100, Math.round((trap.daysSince / TRAP_CYCLE_DAYS) * 100)));
+    }
+
+    function avgTanksPct() {
+      if (!locations.length) return 0;
+      return Math.round(locations.reduce((acc, l) => acc + calcTank(l).pct, 0) / locations.length);
+    }
+
+    function avgTrapsDirtPct() {
+      const traps = locations.filter(l => l.trap);
+      if (!traps.length) return 0;
+      return Math.round(traps.reduce((acc, l) => acc + calcTrapDirtPct(l.trap), 0) / traps.length);
+    }
+
+    function fmtVol(gal) {
+      const rounded = Math.round(gal * 10) / 10;
+      if (appPrefs.unit === "l") return `${Math.round(gal * GAL_TO_L)} L`;
+      return `${rounded} Gal`;
+    }
+
+    function notify(msg) {
+      const el = document.getElementById("toastMsg");
+      el.textContent = msg;
+      el.classList.add("show");
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => el.classList.remove("show"), 1900);
+    }
+
+    function pushActivity(badge, cls, text) {
+      const t = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      activityLog.unshift({ badge, cls, time: t, text });
+      activityLog = activityLog.slice(0, 5);
+    }
+
+    function setTab(tab) {
+      if (tab === "clientes" && !isAdmin()) return;
+      currentTab = tab;
+      document.querySelectorAll(".dock button").forEach(b => b.classList.remove("active"));
+      const btn = document.getElementById("tab-" + tab);
+      if (btn) btn.classList.add("active");
+      render(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function toggleNetwork() {
+      isOnline = !isOnline;
+      saveState();
+      syncDrawerUI();
+      notify(isOnline ? "Online" : "Offline • Guardado local");
+    }
+
+    function openPickupModal(id) {
+      const loc = locations.find(l => l.id === id);
+      if (!loc) return;
+      pickupTargetId = id;
+      const isL = appPrefs.unit === "l";
+      const maxDisplay = Math.max(0, isL ? Math.round(loc.actualGal * GAL_TO_L) : Math.round(loc.actualGal * 10) / 10);
+      document.getElementById("pmTitle").textContent = `${loc.code} • ${loc.name}`;
+      document.getElementById("pmSub").textContent = `Disponible: ~${fmtVol(loc.actualGal)} (${calcTank(loc).pct}%)`;
+      const inp = document.getElementById("pmAmountInput");
+      const sld = document.getElementById("pmAmountSlider");
+      const safeMax = Math.max(1, maxDisplay);
+      inp.max = safeMax;
+      sld.max = safeMax;
+      inp.value = maxDisplay;
+      sld.value = maxDisplay;
+      document.getElementById("pickupModal").classList.add("open");
+    }
+
+    function closePickupModal() {
+      pickupTargetId = null;
+      document.getElementById("pickupModal").classList.remove("open");
+    }
+
+    function syncPickupSlider(val) {
+      const sld = document.getElementById("pmAmountSlider");
+      const num = Math.max(0, Number(val) || 0);
+      if (sld) sld.value = Math.min(Number(sld.max) || 200, num);
+    }
+
+    function syncPickupInput(val) {
+      const inp = document.getElementById("pmAmountInput");
+      if (inp) inp.value = Math.max(0, Number(val) || 0);
+    }
+
+    function setPickupRatio(ratio) {
+      const loc = locations.find(l => l.id === pickupTargetId);
+      if (!loc) return;
+      const isL = appPrefs.unit === "l";
+      const maxDisplay = isL ? loc.actualGal * GAL_TO_L : loc.actualGal;
+      const val = isL ? Math.round(maxDisplay * ratio) : Math.round(maxDisplay * ratio * 10) / 10;
+      document.getElementById("pmAmountInput").value = val;
+      document.getElementById("pmAmountSlider").value = val;
+    }
+
+    function confirmManualPickup() {
+      const loc = locations.find(l => l.id === pickupTargetId);
+      if (!loc) return;
+      const rawVal = Math.max(0, Number(document.getElementById("pmAmountInput").value) || 0);
+      const removedGal = appPrefs.unit === "l"
+        ? Math.min(loc.actualGal, rawVal / GAL_TO_L)
+        : Math.min(loc.actualGal, rawVal);
+      loc.actualGal = Math.max(0, Math.round((loc.actualGal - removedGal) * 10) / 10);
+      loc.collectedToday = loc.actualGal <= 1;
+      totalCollectedGal = Math.round((totalCollectedGal + removedGal) * 10) / 10;
+      pickupsCount += 1;
+      pushActivity("RECOGIDA", "badge-teal", `${loc.name} — ~${fmtVol(removedGal)} recogidos`);
+      closePickupModal();
+      render();
+      notify(`Recogida registrada (~${fmtVol(removedGal)})`);
+    }
+
+    function openTankMenu(id) {
+      const loc = locations.find(l => l.id === id);
+      if (!loc) return;
+      tankMenuId = id;
+      const st = calcTank(loc);
+      const b = document.getElementById("tmBadge");
+      b.textContent = `${st.pct}%`;
+      b.className = `badge ${st.critical ? "badge-red" : "badge-gold"}`;
+      document.getElementById("tmCode").textContent = loc.code;
+      document.getElementById("tmTitle").textContent = loc.name;
+      document.getElementById("tmSub").textContent = `${loc.address} • ${fmtVol(loc.actualGal)} / ${fmtVol(loc.capacityGal)}`;
+      const simBtn = document.getElementById("tmSimBtn");
+      if (simBtn) simBtn.style.display = isAdmin() ? "flex" : "none";
+      document.getElementById("tankMenuModal").classList.add("open");
+    }
+
+    function closeTankMenu() {
+      tankMenuId = null;
+      document.getElementById("tankMenuModal").classList.remove("open");
+    }
+
+    function tmActionCollect() {
+      const id = tankMenuId;
+      closeTankMenu();
+      if (id) openPickupModal(id);
+    }
+
+    function tmActionSim() {
+      if (!isAdmin()) return;
+      const id = tankMenuId;
+      closeTankMenu();
+      if (id) openSimModal(id);
+    }
+
+    function tmActionGpsSingle() {
+      const id = tankMenuId;
+      const loc = locations.find(l => l.id === id);
+      closeTankMenu();
+      if (!loc) return;
+      window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc.address || "")}&travelmode=driving`, "_blank", "noopener,noreferrer");
+    }
+
+    function getChainStops() {
+      const pool = locations.filter(l => !excludedRouteIds.includes(l.id));
+      const ordered = [];
+      let curMiles = 0;
+      const copy = [...pool];
+      while (copy.length > 0) {
+        copy.sort((a, b) => Math.abs(a.miles - curMiles) - Math.abs(b.miles - curMiles));
+        const next = copy.shift();
+        ordered.push(next);
+        curMiles = next.miles;
+      }
+      return ordered;
+    }
+
+    function removeFromRoute(id) {
+      if (!excludedRouteIds.includes(id)) {
+        excludedRouteIds.push(id);
+        render();
+        notify("Parada omitida de la ruta");
+      }
+    }
+
+    function restoreAllRouteStops() {
+      excludedRouteIds = [];
+      render();
+      notify("Ruta completa restaurada");
+    }
+
+    function openMultiRouteGps() {
+      const stops = getChainStops().filter(s => !s.collectedToday);
+      const list = stops.length ? stops : getChainStops();
+      if (!list.length) return;
+      if (list.length === 1) {
+        window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(list[0].address)}&travelmode=driving`, "_blank", "noopener,noreferrer");
+        return;
+      }
+      const dest = encodeURIComponent(list[list.length - 1].address);
+      const wp = list.slice(0, -1).map(s => encodeURIComponent(s.address)).join("|");
+      window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}&waypoints=${wp}&travelmode=driving`, "_blank", "noopener,noreferrer");
+    }
+
+    function openAddModal() {
+      if (!isAdmin()) {
+        notify("Solo el administrador puede agregar locaciones");
+        return;
+      }
+      document.getElementById("addModal").classList.add("open");
+    }
+
+    function closeAddModal() {
+      document.getElementById("addModal").classList.remove("open");
+    }
+
+    function saveNewLocation() {
+      if (!isAdmin()) return;
+      const name = document.getElementById("fName").value.trim();
+      if (!name) return;
+      const address = document.getElementById("fAddr").value.trim() || "Dirección por confirmar";
+      const code = document.getElementById("fTankCode").value.trim() || `OIL-00${locations.length + 1}`;
+      const capacityGal = Math.max(10, Number(document.getElementById("fCap").value) || 150);
+      const actualGal = Math.max(0, Math.min(capacityGal, Number(document.getElementById("fCur").value) || 0));
+      const ratePerDay = Math.max(0.5, Number(document.getElementById("fRate").value) || 15);
+      const miles = Math.max(0.5, Number(document.getElementById("fMiles").value) || 3.5);
+      const trapCode = document.getElementById("fTrap").value.trim();
+
+      locations.unshift({
+        id: "LOC-" + Date.now(),
+        code, name, address, capacityGal, actualGal, ratePerDay, miles,
+        collectedToday: actualGal === 0,
+        trap: trapCode ? { code: trapCode, lastClean: "Hace 25 días", daysSince: 25, cleanedStatus: "pending", reason: "" } : null
+      });
+      pushActivity("NUEVO", "badge-gold", `${name} — Agregado (${code})`);
+      closeAddModal();
+      ["fName", "fAddr", "fTankCode", "fCap", "fCur", "fRate", "fMiles", "fTrap"].forEach(id => {
+        document.getElementById(id).value = "";
+      });
+      render();
+      notify(`${name} agregado`);
+    }
+
+    function openSimModal(id) {
+      if (!isAdmin()) return;
+      const loc = locations.find(x => x.id === id);
+      if (!loc) return;
+      simTargetId = id;
+      document.getElementById("simTitle").textContent = `${loc.code} • ${loc.name}`;
+      document.getElementById("simSub").textContent = `Capacidad: ${fmtVol(loc.capacityGal)}`;
+      const inp = document.getElementById("simGalInput");
+      const sld = document.getElementById("simGalSlider");
+      inp.max = loc.capacityGal;
+      sld.max = loc.capacityGal;
+      inp.value = loc.actualGal;
+      sld.value = loc.actualGal;
+      document.getElementById("simModal").classList.add("open");
+    }
+
+    function closeSimModal() {
+      simTargetId = null;
+      document.getElementById("simModal").classList.remove("open");
+    }
+
+    function syncSimSlider(val) {
+      const sld = document.getElementById("simGalSlider");
+      if (sld) sld.value = Math.min(Number(sld.max) || 200, Math.max(0, Number(val) || 0));
+    }
+
+    function syncSimInput(val) {
+      const inp = document.getElementById("simGalInput");
+      if (inp) inp.value = Math.max(0, Number(val) || 0);
+    }
+
+    function applySimGal() {
+      if (!isAdmin()) return;
+      const loc = locations.find(x => x.id === simTargetId);
+      if (!loc) return;
+      const val = Math.max(0, Math.min(loc.capacityGal, Number(document.getElementById("simGalInput").value) || 0));
+      loc.actualGal = Math.round(val * 10) / 10;
+      loc.collectedToday = loc.actualGal === 0;
+      closeSimModal();
+      render();
+      notify(`Nivel actualizado: ${calcTank(loc).pct}%`);
+    }
+
+    function markTrapCleaned(id) {
+      const loc = locations.find(l => l.id === id);
+      if (!loc || !loc.trap) return;
+      loc.trap.lastClean = "Hoy";
+      loc.trap.daysSince = 0;
+      loc.trap.cleanedStatus = "cleaned";
+      loc.trap.reason = "";
+      pushActivity("TRAMPA LIMPIA", "badge-teal", `${loc.name} (${loc.trap.code})`);
+      render();
+      notify("Trampa marcada como limpia");
+    }
+
+    function markTrapNotCleaned(id) {
+      const loc = locations.find(l => l.id === id);
+      if (!loc || !loc.trap) return;
+      const input = document.getElementById("reason-" + id);
+      loc.trap.cleanedStatus = "not_cleaned";
+      loc.trap.reason = (input && input.value.trim()) || "Pendiente hoy";
+      pushActivity("TRAMPA PENDIENTE", "badge-red", `${loc.name} (${loc.trap.code})`);
+      render();
+      notify("Marcada como no limpiada");
+    }
+
+    function reopenTrap(id) {
+      const loc = locations.find(l => l.id === id);
+      if (!loc || !loc.trap) return;
+      if (loc.trap.daysSince === 0) loc.trap.daysSince = 30;
+      loc.trap.cleanedStatus = "pending";
+      render();
+    }
+
+    function destroyLeafletMap() {
+      if (leafletMap) {
+        leafletMap.remove();
+        leafletMap = null;
+        leafletCircle = null;
+        leafletMarkers = [];
+      }
+    }
+
+    function getFilteredProspects() {
+      return prospects.filter(p => p.miles <= radiusFilterMi && `${p.name} ${p.category} ${p.address}`.toLowerCase().includes(prospectQuery.toLowerCase()));
+    }
+
+    function selectProspectFromMap(id) {
+      selectedProspectId = id;
+      const bodyEl = document.getElementById("prospectsListAndDetail");
+      if (bodyEl) bodyEl.innerHTML = renderProspectsListAndDetailHtml();
+      updateLeafletMarkers();
+      saveState();
+    }
+
+    function updateLeafletMarkers() {
+      if (!leafletMap || typeof L === "undefined") return;
+      leafletMarkers.forEach(m => m.remove());
+      leafletMarkers = [];
+      const list = getFilteredProspects();
+      const activePin = list.find(p => p.id === selectedProspectId) || list[0] || null;
+      if (leafletCircle) {
+        leafletCircle.setLatLng([userCoords.lat, userCoords.lon]);
+        leafletCircle.setRadius(radiusFilterMi * 1609.34);
+      }
+      list.forEach(p => {
+        const isSel = activePin && activePin.id === p.id;
+        const icon = L.divIcon({
+          className: "",
+          html: `<div class="leaflet-pin-badge ${isSel ? "selected" : ""} ${p.converted ? "converted" : ""}">${esc(p.name.split(" ")[0])} (${p.miles}m)</div>`,
+          iconSize: [0, 0]
+        });
+        const marker = L.marker([userCoords.lat + (p.dLat || 0.01), userCoords.lon + (p.dLon || 0.01)], { icon }).addTo(leafletMap);
+        marker.on("click", () => selectProspectFromMap(p.id));
+        leafletMarkers.push(marker);
+      });
+    }
+
+    function initLeafletMap() {
+      const box = document.getElementById("leafletMapBox");
+      if (!box || typeof L === "undefined") return;
+      destroyLeafletMap();
+      leafletMap = L.map("leafletMapBox", { center: [userCoords.lat, userCoords.lon], zoom: 12, zoomControl: true });
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "&copy; OpenStreetMap" }).addTo(leafletMap);
+      leafletCircle = L.circle([userCoords.lat, userCoords.lon], {
+        radius: radiusFilterMi * 1609.34, color: "#c97634", weight: 2, fillColor: "#e8a263", fillOpacity: 0.12
+      }).addTo(leafletMap);
+      updateLeafletMarkers();
+      setTimeout(() => { if (leafletMap) leafletMap.invalidateSize(); }, 120);
+    }
+
+    function convertProspectToClient(id) {
+      if (!isAdmin()) return;
+      const p = prospects.find(item => item.id === id);
+      if (!p) return;
+      p.converted = true;
+      locations.unshift({
+        id: "LOC-" + Date.now(),
+        code: `OIL-00${locations.length + 1}`,
+        name: p.name, address: p.address, capacityGal: 150, actualGal: Math.min(150, p.estOilGal),
+        ratePerDay: 14, miles: p.miles, collectedToday: false,
+        trap: { code: `TG-${100 + locations.length + 1}`, lastClean: "Nuevo", daysSince: 10, cleanedStatus: "pending", reason: "" }
+      });
+      render();
+      notify(`${p.name} agregado a clientes`);
+    }
+
+    function renderInicio() {
+      const tankPct = avgTanksPct();
+      const dirtPct = avgTrapsDirtPct();
+      const openLeads = prospects.filter(p => !p.converted).length;
+
+      return `
+        <div class="soft-hero">
+          <span class="badge badge-gold">${isAdmin() ? "MODO ADMIN" : "MODO USUARIO"}</span>
+          <h2>Oil Status</h2>
+          <p>${esc(currentSession ? currentSession.name : "")} • ${esc(lastSavedAt)}</p>
+          <div class="pct-meter-row">
+            <div class="meter-box" onclick="setTab('tanques')">
+              <div style="font-size:11px;color:#cbd5e1;font-weight:700;">TANQUES</div>
+              <div class="meter-val">${tankPct}%</div>
+              <div class="progress-bar"><div class="progress-fill" style="width:${tankPct}%;background:var(--oil-foam)"></div></div>
+            </div>
+            <div class="meter-box" onclick="setTab('trampas')">
+              <div style="font-size:11px;color:#cbd5e1;font-weight:700;">TRAMPAS</div>
+              <div class="meter-val">${dirtPct}%</div>
+              <div class="progress-bar"><div class="progress-fill" style="width:${dirtPct}%;background:${dirtPct >= 75 ? "var(--red)" : "#e8a263"}"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card interactive" style="margin:0;text-align:center;" onclick="setTab('tanques')">
+            <div class="muted" style="font-weight:700;">RECOGIDO</div>
+            <div style="font-size:19px;font-weight:900;margin:4px 0;color:var(--teal);">${fmtVol(totalCollectedGal)}</div>
+            <div class="muted">${pickupsCount} recogidas</div>
+          </div>
+          <div class="card interactive" style="margin:0;text-align:center;" onclick="${isAdmin() ? "setTab('clientes')" : "setTab('rutas')"}">
+            <div class="muted" style="font-weight:700;">${isAdmin() ? "PROSPECTOS" : "RUTAS"}</div>
+            <div style="font-size:19px;font-weight:900;margin:4px 0;color:var(--oil-light);">${isAdmin() ? openLeads : locations.length}</div>
+            <div class="muted">${isAdmin() ? "cerca de ti" : "paradas activas"}</div>
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <button class="pill-action" onclick="setTab('tanques')">Tanques</button>
+          <button class="pill-action" onclick="setTab('rutas')">Rutas</button>
+          <button class="pill-action" onclick="setTab('trampas')">Trampas</button>
+        </div>
+
+        ${activityLog.map(item => `
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+              <span class="badge ${item.cls}">${esc(item.badge)}</span>
+              <span class="muted">${esc(item.time)}</span>
+            </div>
+            <div style="font-weight:700;font-size:13px;">${esc(item.text)}</div>
+          </div>
+        `).join("")}
+      `;
+    }
+
+    function renderTankCardsHtml() {
+      const filtered = locations.filter(l => {
+        const st = calcTank(l);
+        const matchesQ = `${l.code} ${l.name} ${l.address}`.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesQ && (!onlyCritical || st.critical);
+      });
+
+      if (!filtered.length) {
+        return `<div class="card"><div class="muted">Sin resultados.</div></div>`;
+      }
+
+      return filtered.map(loc => {
+        const st = calcTank(loc);
+        return `
+          <div class="card interactive" style="display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;" onclick="openTankMenu('${loc.id}')">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="tank-visual mini">
+                <div class="tank-liquid ${st.critical ? "critical" : ""}" style="height:${st.pct}%"></div>
+                <span class="tank-pct">${st.pct}%</span>
+              </div>
+              <div>
+                <div style="font-weight:800;font-size:14px;">${esc(loc.code)} • ${esc(loc.name)}</div>
+                <div class="muted">${fmtVol(loc.actualGal)} / ${fmtVol(loc.capacityGal)} • ${loc.miles} mi</div>
+              </div>
+            </div>
+            <span class="badge ${st.critical ? "badge-red" : "badge-gold"}">${st.pct}%</span>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderTanques() {
+      return `
+        <div class="card">
+          <input class="input" style="margin-bottom:8px;" placeholder="Buscar tanque o restaurante..." value="${esc(searchQuery)}" oninput="searchQuery=this.value; document.getElementById('tanksListContainer').innerHTML=renderTankCardsHtml();" />
+          <div class="row-actions" style="margin-top:0;">
+            <button class="btn-secondary" style="${onlyCritical ? "background:var(--red-soft);color:var(--red);" : ""}" onclick="onlyCritical=!onlyCritical; render();">Críticos (90%+)</button>
+            ${isAdmin() ? `<button class="btn-primary" style="width:auto;" onclick="openAddModal()">+Añadir</button>` : ""}
+          </div>
+        </div>
+        <div id="tanksListContainer">${renderTankCardsHtml()}</div>
+      `;
+    }
+
+    function renderRutas() {
+      const ordered = getChainStops();
+      const nextStop = ordered.find(l => !l.collectedToday) || null;
+      return `
+        <div class="chain-console">
+          <div class="chain-head">
+            <div>
+              <h3>Ruta en Cadena</h3>
+              <p>${ordered.length} paradas ordenadas</p>
+            </div>
+            <button class="btn-primary" style="width:auto;padding:8px 14px;" onclick="openMultiRouteGps()">Abrir GPS</button>
+          </div>
+          <div class="chain-strip">
+            ${ordered.map((l, i) => `<span class="chain-chip"><b>#${i + 1}</b> ${esc(l.name.split(" ")[0])} (${l.miles}m)</span>`).join("")}
+          </div>
+          ${nextStop ? `
+            <div class="active-stop-banner">
+              <div style="font-weight:800;font-size:15px;">${esc(nextStop.name)}</div>
+              <div class="muted" style="color:#cbd5e1;">${esc(nextStop.address)} • ${fmtVol(nextStop.actualGal)}</div>
+              <div class="row-actions">
+                <button class="btn-secondary" onclick="removeFromRoute('${nextStop.id}')">Omitir</button>
+                <button class="btn-teal" onclick="openPickupModal('${nextStop.id}')">Recoger</button>
+              </div>
+            </div>
+          ` : `
+            <div class="active-stop-banner">
+              <div style="font-weight:800;">Ruta completada</div>
+              ${excludedRouteIds.length ? `<button class="btn-secondary" style="margin-top:8px;width:100%;" onclick="restoreAllRouteStops()">Restaurar paradas</button>` : ""}
+            </div>
+          `}
+        </div>
+
+        ${ordered.map((loc, idx) => {
+          const st = calcTank(loc);
+          return `
+            <div class="card">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <strong>#${idx + 1} • ${esc(loc.name)}</strong>
+                <span class="badge ${loc.collectedToday ? "badge-teal" : "badge-gold"}">${loc.collectedToday ? "LISTO" : `${st.pct}%`}</span>
+              </div>
+              <div class="muted">${esc(loc.address)} • ${loc.miles} mi</div>
+              <div class="row-actions">
+                <button class="btn-secondary" onclick="removeFromRoute('${loc.id}')">Omitir</button>
+                <button class="btn-teal" onclick="openPickupModal('${loc.id}')">Recoger</button>
+              </div>
+            </div>
+          `;
+        }).join("")}
+      `;
+    }
+
+    function renderTrampas() {
+      const traps = locations.filter(l => l.trap);
+      const pending = traps.filter(l => l.trap.cleanedStatus === "pending");
+      const doneClean = traps.filter(l => l.trap.cleanedStatus === "cleaned");
+      const doneNo = traps.filter(l => l.trap.cleanedStatus === "not_cleaned");
+
+      return `
+        ${pending.map(loc => {
+          const dirt = calcTrapDirtPct(loc.trap);
+          return `
+            <div class="card">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <strong>${esc(loc.trap.code)} • ${esc(loc.name)}</strong>
+                <span class="badge ${dirt >= 75 ? "badge-red" : "badge-gold"}">${dirt}%</span>
+              </div>
+              <div class="muted">${esc(loc.trap.lastClean)} (${loc.trap.daysSince}d)</div>
+              <div class="dirt-track"><div class="dirt-fill ${dirt >= 75 ? "high-dirt" : ""}" style="width:${dirt}%"></div></div>
+              <input id="reason-${loc.id}" class="input" style="margin-bottom:8px;" placeholder="Nota opcional..." value="${esc(loc.trap.reason || "")}" />
+              <div class="row-actions" style="margin-top:0;">
+                <button class="btn-teal" onclick="markTrapCleaned('${loc.id}')">Se limpió</button>
+                <button class="btn-red" onclick="markTrapNotCleaned('${loc.id}')">No se limpió</button>
+              </div>
+            </div>
+          `;
+        }).join("")}
+
+        <div class="card">
+          <div style="font-weight:800;margin-bottom:6px;">Resumen (${doneClean.length} limpias • ${doneNo.length} pendientes)</div>
+          ${[...doneClean, ...doneNo].map(loc => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--border);font-size:12.5px;">
+              <span>${esc(loc.trap.code)} • ${esc(loc.name)} — <strong>${loc.trap.cleanedStatus === "cleaned" ? "Limpia" : "No limpiada"}</strong></span>
+              <button class="btn-secondary" style="padding:4px 9px;font-size:11px;" onclick="reopenTrap('${loc.id}')">Cambiar</button>
+            </div>
+          `).join("") || `<div class="muted">Sin marcas todavía.</div>`}
+        </div>
+      `;
+    }
+
+    function renderProspectsListAndDetailHtml() {
+      const list = getFilteredProspects();
+      return list.map(p => `
+        <div class="card interactive" onclick="selectProspectFromMap('${p.id}')">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <strong>${esc(p.name)}</strong>
+            <span class="badge ${p.converted ? "badge-teal" : "badge-gold"}">${p.miles} mi</span>
+          </div>
+          <div class="muted">${esc(p.category)} • ${esc(p.address)} • ~${fmtVol(p.estOilGal)}</div>
+          <div class="row-actions">
+            <button class="btn-secondary" onclick="event.stopPropagation(); window.open('https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(p.address)}&travelmode=driving','_blank','noopener,noreferrer')">GPS</button>
+            ${p.converted
+              ? `<button class="btn-teal" onclick="event.stopPropagation(); setTab('tanques')">Cliente ✓</button>`
+              : `<button class="btn-primary" style="width:auto;" onclick="event.stopPropagation(); convertProspectToClient('${p.id}')">Hacer Cliente</button>`
+            }
+          </div>
+        </div>
+      `).join("") || `<div class="card"><div class="muted">Sin restaurantes en este radio.</div></div>`;
+    }
+
+    function renderBuscarCliente() {
+      if (!isAdmin()) return renderInicio();
+      return `
+        <div class="card" style="padding:12px;">
+          <div class="radius-pills">
+            ${[2, 5, 10].map(r => `<button class="radius-pill ${radiusFilterMi === r ? "active" : ""}" onclick="radiusFilterMi=${r}; render();">${r} mi</button>`).join("")}
+          </div>
+          <input class="input" style="margin-bottom:0;" placeholder="Buscar restaurante..." value="${esc(prospectQuery)}" oninput="prospectQuery=this.value; document.getElementById('prospectsListAndDetail').innerHTML=renderProspectsListAndDetailHtml(); updateLeafletMarkers();" />
+        </div>
+        <div id="leafletMapBox"></div>
+        <div id="prospectsListAndDetail">${renderProspectsListAndDetailHtml()}</div>
+      `;
+    }
+
+    function render(animate = false) {
+      const shell = document.getElementById("appShell");
+      const topBar = document.getElementById("topBar");
+      const dock = document.getElementById("bottomDock");
+      const container = document.getElementById("viewContainer");
+
+      if (currentTab !== "clientes" || !currentSession || !isAdmin()) {
+        destroyLeafletMap();
+      }
+
+      if (!currentSession) {
+        shell.classList.remove("logged-in");
+        topBar.style.display = "none";
+        dock.classList.add("hidden");
+        container.innerHTML = renderAuthGate();
+      } else {
+        shell.classList.add("logged-in");
+        topBar.style.display = "flex";
+        dock.classList.remove("hidden");
+        syncDrawerUI();
+        if (currentTab === "inicio") container.innerHTML = renderInicio();
+        else if (currentTab === "tanques") container.innerHTML = renderTanques();
+        else if (currentTab === "rutas") container.innerHTML = renderRutas();
+        else if (currentTab === "trampas") container.innerHTML = renderTrampas();
+        else if (currentTab === "clientes") {
+          container.innerHTML = renderBuscarCliente();
+          if (isAdmin()) initLeafletMap();
+        }
+        saveState();
+      }
+
+      if (animate) {
+        container.classList.remove("view-anim");
+        void container.offsetWidth;
+        container.classList.add("view-anim");
+      }
+    }
+
+    loadState();
+    syncDrawerUI();
+    render(true);
+  </script>
+</body>
+</html>
