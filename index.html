@@ -2290,6 +2290,276 @@
     loadState();
     syncDrawerUI();
     render(true);
-  </script>
+  </script><!-- ===== MÓDULO OIL STATUS: ASIGNACIÓN DE TANQUES Y LOG DE ADMIN ===== -->
+<section id="oilStatusExtraPanel" style="max-width: 900px; margin: 24px auto; padding: 16px; border-radius: 14px; border: 1px solid #d1d5db; background: #ffffff; color: #111827; font-family: system-ui, -apple-system, sans-serif;">
+  <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+    <h3 style="margin: 0; font-size: 18px;">Gestión de Tanques y Auditoría</h3>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+      <button type="button" id="btnToggleTankAssign" style="padding: 8px 14px; border-radius: 8px; border: none; background: #0f766e; color: #fff; cursor: pointer; font-weight: 600;">
+        Asignar Tanque
+      </button>
+      <button type="button" id="btnToggleAdminLog" style="padding: 8px 14px; border-radius: 8px; border: 1px solid #374151; background: #f9fafb; color: #111827; cursor: pointer; font-weight: 600;">
+        Log Admin (Bloqueado)
+      </button>
+    </div>
+  </div>
+
+  <!-- 1. INTERFAZ PARA ASIGNAR TANQUES -->
+  <div id="tankAssignBox" style="display: none; padding: 14px; border-radius: 10px; background: #f8fafc; border: 1px solid #e2e8f0; margin-bottom: 18px;">
+    <h4 style="margin: 0 0 12px 0;">Asignar o Actualizar Tanque a Restaurante</h4>
+    <form id="tankAssignForm" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
+      <input type="text" id="tankRestaurantName" placeholder="Nombre del restaurante" required style="padding: 8px 10px; border-radius: 8px; border: 1px solid #cbd5e1;" />
+      <input type="text" id="tankCode" placeholder="Código / Serie del tanque (ej. TQ-01)" required style="padding: 8px 10px; border-radius: 8px; border: 1px solid #cbd5e1;" />
+      <input type="number" id="tankCapacity" placeholder="Capacidad (galones)" min="1" required style="padding: 8px 10px; border-radius: 8px; border: 1px solid #cbd5e1;" />
+      <select id="tankType" style="padding: 8px 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff;">
+        <option value="Aceite usado (UCO)">Aceite usado (UCO)</option>
+        <option value="Trampa de grasa">Trampa de grasa</option>
+      </select>
+      <input type="text" id="tankNotes" placeholder="Nota / ubicación (opcional)" style="padding: 8px 10px; border-radius: 8px; border: 1px solid #cbd5e1;" />
+      <button type="submit" style="padding: 9px 14px; border-radius: 8px; border: none; background: #1d4ed8; color: #fff; cursor: pointer; font-weight: 600;">
+        Guardar Asignación
+      </button>
+    </form>
+
+    <div style="margin-top: 14px; overflow-x: auto;">
+      <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+        <thead>
+          <tr style="background: #e2e8f0; text-align: left;">
+            <th style="padding: 8px;">Restaurante</th>
+            <th style="padding: 8px;">Tanque</th>
+            <th style="padding: 8px;">Capacidad</th>
+            <th style="padding: 8px;">Tipo</th>
+            <th style="padding: 8px;">Acción</th>
+          </tr>
+        </thead>
+        <tbody id="tankAssignmentsTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 2. SECCIÓN DE LOG EXCLUSIVA PARA ADMIN -->
+  <div id="adminLogBox" style="display: none; padding: 14px; border-radius: 10px; background: #111827; color: #f9fafb; border: 1px solid #1f2937;">
+    <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+      <h4 style="margin: 0; color: #38bdf8;">Historial de Actividad (Solo Admin)</h4>
+      <div style="display: flex; gap: 8px;">
+        <input type="text" id="adminLogFilter" placeholder="Filtrar acción o usuario..." style="padding: 6px 10px; border-radius: 6px; border: 1px solid #374151; background: #1f2937; color: #fff; font-size: 13px;" />
+        <button type="button" id="btnClearAdminLog" style="padding: 6px 10px; border-radius: 6px; border: none; background: #dc2626; color: #fff; cursor: pointer; font-size: 13px;">
+          Limpiar Log
+        </button>
+      </div>
+    </div>
+    <div id="adminLogList" style="max-height: 260px; overflow-y: auto; font-size: 13px; line-height: 1.5;"></div>
+  </div>
+</section>
+
+<script>
+(function () {
+  const STORAGE_TANKS_KEY = "oil_status_tank_assignments_v1";
+  const STORAGE_LOG_KEY = "oil_status_admin_logs_v1";
+  const ADMIN_PIN_FALLBACK = "4200";
+
+  let isAdminUnlocked = false;
+
+  const getTanks = () => {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_TANKS_KEY) || "[]");
+    } catch {
+      return [];
+    }
+  };
+
+  const saveTanks = (list) => {
+    localStorage.setItem(STORAGE_TANKS_KEY, JSON.stringify(list));
+  };
+
+  const getLogs = () => {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_LOG_KEY) || "[]");
+    } catch {
+      return [];
+    }
+  };
+
+  const saveLogs = (list) => {
+    localStorage.setItem(STORAGE_LOG_KEY, JSON.stringify(list));
+  };
+
+  // Función global para registrar cualquier acción desde el resto de tu app
+  window.registrarLogAdmin = function (accion, detalle = "", usuario = "Admin") {
+    const logs = getLogs();
+    logs.unshift({
+      id: Date.now() + "-" + Math.random().toString(36).slice(2, 6),
+      fecha: new Date().toLocaleString(),
+      usuario,
+      accion,
+      detalle
+    });
+    saveLogs(logs.slice(0, 500)); // guarda hasta los últimos 500 eventos
+    renderAdminLog();
+  };
+
+  // Función global para activar o desactivar el acceso de admin desde tu login/PIN
+  window.setOilStatusAdminAccess = function (enabled) {
+    isAdminUnlocked = Boolean(enabled);
+    const btnLog = document.getElementById("btnToggleAdminLog");
+    const logBox = document.getElementById("adminLogBox");
+    if (btnLog) {
+      btnLog.textContent = isAdminUnlocked ? "Ver Log Admin" : "Log Admin (PIN)";
+    }
+    if (!isAdminUnlocked && logBox) {
+      logBox.style.display = "none";
+    }
+    renderAdminLog();
+  };
+
+  function renderTanksTable() {
+    const tbody = document.getElementById("tankAssignmentsTableBody");
+    if (!tbody) return;
+    const tanks = getTanks();
+
+    if (tanks.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="padding: 10px; color: #64748b;">Aún no hay tanques asignados.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = tanks
+      .map(
+        (t, idx) => `
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px; font-weight: 600;">${escapeHtml(t.restaurante)}</td>
+          <td style="padding: 8px;">${escapeHtml(t.codigo)}</td>
+          <td style="padding: 8px;">${escapeHtml(String(t.capacidad))} gal</td>
+          <td style="padding: 8px;">${escapeHtml(t.tipo)}</td>
+          <td style="padding: 8px;">
+            <button type="button" onclick="window.__removeTankAssignment(${idx})" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #ef4444; background: #fff; color: #ef4444; cursor: pointer; font-size: 12px;">
+              Quitar
+            </button>
+          </td>
+        </tr>`
+      )
+      .join("");
+  }
+
+  window.__removeTankAssignment = function (index) {
+    const tanks = getTanks();
+    const removed = tanks[index];
+    if (!removed) return;
+    tanks.splice(index, 1);
+    saveTanks(tanks);
+    renderTanksTable();
+    window.registrarLogAdmin(
+      "Desasignar tanque",
+      `Tanque ${removed.codigo} retirado de ${removed.restaurante}`
+    );
+  };
+
+  function renderAdminLog() {
+    const listEl = document.getElementById("adminLogList");
+    const filterInput = document.getElementById("adminLogFilter");
+    if (!listEl || !isAdminUnlocked) return;
+
+    const term = (filterInput ? filterInput.value : "").trim().toLowerCase();
+    const logs = getLogs().filter(
+      (item) =>
+        !term ||
+        item.accion.toLowerCase().includes(term) ||
+        item.detalle.toLowerCase().includes(term) ||
+        item.usuario.toLowerCase().includes(term)
+    );
+
+    if (logs.length === 0) {
+      listEl.innerHTML = '<div style="color: #9ca3af;">No hay registros que coincidan.</div>';
+      return;
+    }
+
+    listEl.innerHTML = logs
+      .map(
+        (item) => `
+        <div style="padding: 8px; border-bottom: 1px solid #1f2937;">
+          <span style="color: #9ca3af;">[${escapeHtml(item.fecha)}]</span>
+          <strong style="color: #34d399;">${escapeHtml(item.usuario)}</strong> —
+          <strong>${escapeHtml(item.accion)}</strong>
+          ${item.detalle ? `<div style="color: #d1d5db; margin-top: 2px;">${escapeHtml(item.detalle)}</div>` : ""}
+        </div>`
+      )
+      .join("");
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;");
+  }
+
+  document.getElementById("btnToggleTankAssign")?.addEventListener("click", () => {
+    const box = document.getElementById("tankAssignBox");
+    if (!box) return;
+    box.style.display = box.style.display === "none" ? "block" : "none";
+  });
+
+  document.getElementById("btnToggleAdminLog")?.addEventListener("click", () => {
+    if (!isAdminUnlocked) {
+      const pin = prompt("Ingresa el PIN de administrador:");
+      if (pin !== ADMIN_PIN_FALLBACK) {
+        alert("PIN incorrecto.");
+        return;
+      }
+      window.setOilStatusAdminAccess(true);
+      window.registrarLogAdmin("Acceso Admin", "Sesión de administrador abierta en el log");
+    }
+    const box = document.getElementById("adminLogBox");
+    if (!box) return;
+    const nextState = box.style.display === "none" ? "block" : "none";
+    box.style.display = nextState;
+    if (nextState === "block") renderAdminLog();
+  });
+
+  document.getElementById("tankAssignForm")?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const restaurante = document.getElementById("tankRestaurantName").value.trim();
+    const codigo = document.getElementById("tankCode").value.trim();
+    const capacidad = Number(document.getElementById("tankCapacity").value);
+    const tipo = document.getElementById("tankType").value;
+    const nota = document.getElementById("tankNotes").value.trim();
+
+    if (!restaurante || !codigo || !capacidad) return;
+
+    const tanks = getTanks();
+    const existingIdx = tanks.findIndex(
+      (t) => t.restaurante.toLowerCase() === restaurante.toLowerCase() && t.tipo === tipo
+    );
+
+    const record = { restaurante, codigo, capacidad, tipo, nota };
+    if (existingIdx >= 0) {
+      tanks[existingIdx] = record;
+    } else {
+      tanks.push(record);
+    }
+
+    saveTanks(tanks);
+    renderTanksTable();
+    e.target.reset();
+
+    window.registrarLogAdmin(
+      existingIdx >= 0 ? "Actualizar tanque" : "Asignar tanque",
+      `${restaurante} -> ${codigo} (${capacidad} gal, ${tipo})${nota ? " | Nota: " + nota : ""}`
+    );
+  });
+
+  document.getElementById("adminLogFilter")?.addEventListener("input", renderAdminLog);
+
+  document.getElementById("btnClearAdminLog")?.addEventListener("click", () => {
+    if (!isAdminUnlocked) return;
+    if (!confirm("¿Borrar todo el historial del log de administrador?")) return;
+    saveLogs([]);
+    renderAdminLog();
+  });
+
+  renderTanksTable();
+})();
+</script>
+
 </body>
 </html>
