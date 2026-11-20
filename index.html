@@ -73,6 +73,84 @@
       transition: background 0.25s ease, color 0.25s ease;
     }
 
+    /* Animación de aceite llenando la pantalla al hacer login */
+    .oil-fill-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 999;
+      pointer-events: none;
+      overflow: hidden;
+      display: none;
+    }
+
+    .oil-fill-overlay.active {
+      display: block;
+    }
+
+    .oil-liquid-sheet {
+      position: absolute;
+      left: -10%;
+      width: 120%;
+      height: 130%;
+      bottom: -135%;
+      background: linear-gradient(180deg, #f3b574 0%, #c97634 18%, #8f4715 62%, #4e2408 100%);
+      border-top-left-radius: 42% 48px;
+      border-top-right-radius: 42% 48px;
+      box-shadow: 0 -14px 40px rgba(232, 162, 99, 0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      color: #fffdf8;
+      animation: oilScreenRise 1.25s cubic-bezier(0.32, 0.94, 0.45, 1) forwards;
+    }
+
+    .oil-liquid-sheet::before {
+      content: "";
+      position: absolute;
+      top: 8px;
+      left: 12%;
+      right: 12%;
+      height: 14px;
+      border-radius: 999px;
+      background: rgba(255, 245, 224, 0.42);
+      filter: blur(2px);
+    }
+
+    .oil-fill-badge {
+      background: rgba(24, 34, 48, 0.35);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      padding: 12px 22px;
+      border-radius: 999px;
+      font-weight: 900;
+      font-size: 15px;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+    }
+
+    @keyframes oilScreenRise {
+      0% {
+        bottom: -130%;
+        opacity: 1;
+      }
+      55% {
+        bottom: -8%;
+        opacity: 1;
+      }
+      78% {
+        bottom: -5%;
+        opacity: 1;
+      }
+      100% {
+        bottom: -5%;
+        opacity: 0;
+      }
+    }
+
     .app-shell {
       width: 100%;
       max-width: 440px;
@@ -102,9 +180,35 @@
       background: var(--card);
       border: 1.5px solid var(--border);
       border-radius: 34px;
-      padding: 24px 20px;
+      padding: 20px 20px 24px;
       box-shadow: var(--shadow-lg);
       text-align: center;
+      position: relative;
+    }
+
+    .auth-top-bar {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 4px;
+    }
+
+    .theme-pill-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--card-soft);
+      border: 1.5px solid var(--border);
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 11.5px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .theme-pill-btn:active {
+      transform: scale(0.95);
     }
 
     .auth-brand-row {
@@ -195,6 +299,44 @@
     }
 
     .auth-error.show { display: block; }
+
+    /* Avatares de perfil */
+    .avatar-circle {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: linear-gradient(135deg, var(--oil-light), var(--oil-mid));
+      color: #fff;
+      font-weight: 900;
+      font-size: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid var(--border-strong);
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .avatar-circle.lg {
+      width: 74px;
+      height: 74px;
+      font-size: 26px;
+      border: 3px solid var(--oil-light);
+    }
+
+    .avatar-circle.sm {
+      width: 34px;
+      height: 34px;
+      font-size: 13px;
+    }
+
+    .avatar-circle img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
 
     .topbar {
       display: flex;
@@ -475,10 +617,6 @@
 
     .card.interactive:active { transform: scale(0.99); }
 
-    .card.next-stop {
-      border: 2px solid var(--oil-light);
-    }
-
     .pill-action {
       background: var(--card);
       border: 1.5px solid var(--border);
@@ -546,8 +684,6 @@
       background: rgba(255, 255, 255, 0.15);
       overflow: hidden;
     }
-
-    .progress-bar.light { background: var(--bg-2); }
 
     .progress-fill {
       height: 100%;
@@ -866,8 +1002,19 @@
   </style>
 </head>
 <body>
+  <!-- Animación de aceite llenando la pantalla -->
+  <div id="oilFillOverlay" class="oil-fill-overlay" aria-hidden="true">
+    <div class="oil-liquid-sheet">
+      <div class="oil-fill-badge">
+        <span>🛢️</span>
+        <span id="oilFillLabel">Cargando Oil Status...</span>
+      </div>
+    </div>
+  </div>
+
   <div id="toastMsg" class="toast-msg"></div>
   <input id="importJsonFile" type="file" accept="application/json,.json" style="display:none;" onchange="handleImportJson(event)" />
+  <input id="userAvatarPicker" type="file" accept="image/*" style="display:none;" onchange="handleTargetUserAvatar(event)" />
 
   <div id="drawerBackdrop" class="drawer-backdrop" onclick="closeDrawer()"></div>
   <aside id="rightDrawer" class="right-drawer" aria-label="Menú lateral">
@@ -877,23 +1024,32 @@
     </div>
 
     <div class="profile-box">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-        <strong id="drawerUserName" style="font-size:14px;">Administrador</strong>
-        <span id="drawerRoleBadge" class="badge badge-gold">ADMIN • 4200</span>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <div id="drawerAvatarWrap" class="avatar-circle">A</div>
+        <div style="min-width:0;flex:1;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:4px;">
+            <strong id="drawerUserName" style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Administrador</strong>
+            <span id="drawerRoleBadge" class="badge badge-gold">ADMIN</span>
+          </div>
+          <div id="drawerUserInfo" class="muted" style="margin-top:2px;">Control total activo</div>
+        </div>
       </div>
-      <div id="drawerUserInfo" class="muted" style="margin-bottom:8px;">Control total activo</div>
-      <button class="btn-secondary" style="width:100%;" onclick="openProfileModal()">Editar mi perfil</button>
+      <button class="btn-secondary" style="width:100%;" onclick="openProfileModal()">Editar mi perfil y foto</button>
     </div>
 
     <div id="adminUsersSection">
-      <div class="drawer-section-title">Usuarios Registrados</div>
+      <div class="drawer-section-title">Administración</div>
       <button class="drawer-item" onclick="openUsersManagerModal()">
-        <span>👥 Ver y administrar usuarios (<span id="usersCountLabel">2</span>)</span>
+        <span>👥 Usuarios registrados (<span id="usersCountLabel">2</span>)</span>
         <span>›</span>
       </button>
       <button class="drawer-item" onclick="openNewUserModal()">
         <span>➕ Crear nuevo usuario</span>
         <span>+</span>
+      </button>
+      <button class="drawer-item" onclick="openDeviceLogsModal()">
+        <span>🛡️ Registro IP y Dispositivos (<span id="deviceLogsCountLabel">0</span>)</span>
+        <span>›</span>
       </button>
     </div>
 
@@ -965,13 +1121,27 @@
     <button id="tab-clientes" onclick="setTab('clientes')">Clientes</button>
   </div>
 
+  <!-- Modal Registro IP y Dispositivos (Solo Admin) -->
+  <div id="deviceLogsModal" class="modal-backdrop" onclick="if(event.target===this)closeDeviceLogsModal()">
+    <div id="deviceLogsContent" class="modal-box"></div>
+  </div>
+
+  <!-- Modal Gestión de Usuarios -->
   <div id="usersManagerModal" class="modal-backdrop" onclick="if(event.target===this)closeUsersManagerModal()">
     <div id="usersManagerContent" class="modal-box"></div>
   </div>
 
+  <!-- Modal Nuevo Usuario -->
   <div id="newUserModal" class="modal-backdrop" onclick="if(event.target===this)closeNewUserModal()">
     <div class="modal-box">
       <h3 style="margin-top:0;">Nuevo usuario</h3>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+        <div id="nuAvatarPreview" class="avatar-circle">U</div>
+        <div style="flex:1;">
+          <input id="nuPhotoInput" type="file" accept="image/*" style="display:none;" onchange="handleNewUserAvatar(event)" />
+          <button type="button" class="btn-secondary" style="width:100%;" onclick="document.getElementById('nuPhotoInput').click()">📷 Elegir foto de perfil</button>
+        </div>
+      </div>
       <input id="nuName" class="input" placeholder="Nombre del usuario (ej. Operador Ruta)" />
       <input id="nuPin" class="input" inputmode="numeric" maxlength="6" placeholder="PIN de acceso (ej. 1020)" />
       <input id="nuNote" class="input" placeholder="Nota o zona (ej. Ruta Norte)" />
@@ -982,6 +1152,7 @@
     </div>
   </div>
 
+  <!-- Modal Recogida -->
   <div id="pickupModal" class="modal-backdrop" onclick="if(event.target===this)closePickupModal()">
     <div class="modal-box">
       <span class="badge badge-teal">RECOGIDA</span>
@@ -1002,6 +1173,7 @@
     </div>
   </div>
 
+  <!-- Modal Opciones de Tanque -->
   <div id="tankMenuModal" class="modal-backdrop" onclick="if(event.target===this)closeTankMenu()">
     <div class="modal-box">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
@@ -1027,9 +1199,18 @@
     </div>
   </div>
 
+  <!-- Modal Editar Perfil -->
   <div id="profileModal" class="modal-backdrop" onclick="if(event.target===this)closeProfileModal()">
     <div class="modal-box">
-      <h3 style="margin-top:0;">Editar perfil</h3>
+      <h3 style="margin-top:0;">Editar mi perfil</h3>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:14px;">
+        <div id="profileAvatarPreview" class="avatar-circle lg">A</div>
+        <div style="display:flex;gap:8px;width:100%;">
+          <input id="pPhotoInput" type="file" accept="image/*" style="display:none;" onchange="handleProfileAvatarChange(event)" />
+          <button type="button" class="btn-secondary" style="flex:1;" onclick="document.getElementById('pPhotoInput').click()">📷 Cambiar foto</button>
+          <button type="button" class="btn-secondary" onclick="removeProfileAvatar()">Quitar</button>
+        </div>
+      </div>
       <input id="pNameInput" class="input" placeholder="Tu nombre" />
       <input id="pInfoInput" class="input" placeholder="Nota o área" />
       <div class="row-actions">
@@ -1039,6 +1220,7 @@
     </div>
   </div>
 
+  <!-- Modal Añadir Locación -->
   <div id="addModal" class="modal-backdrop" onclick="if(event.target===this)closeAddModal()">
     <div class="modal-box">
       <h3 style="margin-top:0;">+Añadir locación</h3>
@@ -1061,6 +1243,7 @@
     </div>
   </div>
 
+  <!-- Modal Ajustar Nivel -->
   <div id="simModal" class="modal-backdrop" onclick="if(event.target===this)closeSimModal()">
     <div class="modal-box">
       <h3 id="simTitle" style="margin-top:0;">Ajustar nivel</h3>
@@ -1080,16 +1263,23 @@
     const DEFAULT_USER_PIN = "0001";
     const TRAP_CYCLE_DAYS = 60;
     const GAL_TO_L = 3.78541;
-    const STORAGE_KEY = "oil_status_v9_state";
+    const STORAGE_KEY = "oil_status_v10_state";
 
-    let currentSession = null; // { id, name, role, pin, note }
+    let currentSession = null; // { id, name, role, pin, note, avatar }
     let tokenBuffer = "";
     let tokenError = false;
+    let isLoggingIn = false;
+
+    let pendingProfileAvatar = "";
+    let pendingNewUserAvatar = "";
+    let avatarTargetUserId = null;
 
     let registeredUsers = [
-      { id: "USR-ADMIN", name: "Dueño / Admin", role: "admin", pin: MASTER_ADMIN_PIN, note: "Control total de la app", active: true },
-      { id: "USR-1", name: "Usuario Operativo", role: "user", pin: DEFAULT_USER_PIN, note: "Acceso limitado estándar", active: true }
+      { id: "USR-ADMIN", name: "Dueño / Admin", role: "admin", pin: MASTER_ADMIN_PIN, note: "Control total de la app", active: true, avatar: "" },
+      { id: "USR-1", name: "Usuario Operativo", role: "user", pin: DEFAULT_USER_PIN, note: "Acceso limitado estándar", active: true, avatar: "" }
     ];
+
+    let deviceAccessLogs = [];
 
     let currentTab = "inicio";
     let isOnline = true;
@@ -1168,10 +1358,109 @@
         .replace(/"/g, "&quot;");
     }
 
+    function getAvatarInnerHtml(user) {
+      if (user && user.avatar) {
+        return `<img src="${user.avatar}" alt="${esc(user.name)}" />`;
+      }
+      const initial = (user && user.name ? user.name.trim().charAt(0) : "U").toUpperCase();
+      return esc(initial);
+    }
+
+    // Compresión automática de imagen para guardar en localStorage sin llenar la cuota
+    function compressAvatarFile(file, maxSize = 180) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const scale = Math.min(maxSize / img.width, maxSize / img.height, 1);
+            canvas.width = Math.round(img.width * scale);
+            canvas.height = Math.round(img.height * scale);
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL("image/jpeg", 0.78));
+          };
+          img.onerror = reject;
+          img.src = reader.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Detección de dispositivo e IP para auditoría del Admin
+    function detectDeviceLabel() {
+      const ua = navigator.userAgent || "";
+      let os = "Dispositivo";
+      if (/iPhone/i.test(ua)) os = "iPhone (iOS)";
+      else if (/iPad/i.test(ua)) os = "iPad (iPadOS)";
+      else if (/Android/i.test(ua)) os = "Android";
+      else if (/Mac OS X/i.test(ua)) os = "Mac";
+      else if (/Windows/i.test(ua)) os = "Windows PC";
+      else if (/Linux/i.test(ua)) os = "Linux";
+
+      let browser = "";
+      if (/CriOS|Chrome/i.test(ua) && !/Edg/i.test(ua)) browser = "Chrome";
+      else if (/Safari/i.test(ua) && !/Chrome|CriOS/i.test(ua)) browser = "Safari";
+      else if (/Edg/i.test(ua)) browser = "Edge";
+      else if (/Firefox/i.test(ua)) browser = "Firefox";
+
+      const screenRes = `${window.screen.width}x${window.screen.height}`;
+      return `${os}${browser ? " • " + browser : ""} (${screenRes})`;
+    }
+
+    async function fetchPublicIpWithFallback() {
+      if (!navigator.onLine || !isOnline) return "Offline / Red Local";
+      try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 3000);
+        const res = await fetch("https://api.ipify.org?format=json", { signal: ctrl.signal });
+        clearTimeout(timer);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.ip) return data.ip;
+        }
+      } catch (e) {}
+      return "IP Local / Privada";
+    }
+
+    async function recordDeviceLogin(user) {
+      const logId = "DEV-" + Date.now();
+      const entry = {
+        id: logId,
+        userName: user.name,
+        role: user.role,
+        pin: user.pin,
+        ip: "Detectando IP...",
+        device: detectDeviceLabel(),
+        timestamp: new Date().toLocaleString([], {
+          day: "2-digit", month: "2-digit", year: "2-digit",
+          hour: "2-digit", minute: "2-digit"
+        })
+      };
+      deviceAccessLogs.unshift(entry);
+      deviceAccessLogs = deviceAccessLogs.slice(0, 30);
+      saveState();
+      syncDrawerUI();
+
+      const ip = await fetchPublicIpWithFallback();
+      const target = deviceAccessLogs.find(item => item.id === logId);
+      if (target) {
+        target.ip = ip;
+        saveState();
+        const modal = document.getElementById("deviceLogsModal");
+        if (modal && modal.classList.contains("open")) {
+          renderDeviceLogsHtml();
+        }
+      }
+    }
+
     function buildSnapshotPayload() {
       return {
         appPrefs,
         registeredUsers,
+        deviceAccessLogs,
         locations,
         prospects,
         activityLog,
@@ -1241,15 +1530,17 @@
       if (parsed.appPrefs) appPrefs = { ...appPrefs, ...parsed.appPrefs };
       if (Array.isArray(parsed.registeredUsers) && parsed.registeredUsers.length) {
         registeredUsers = parsed.registeredUsers.map(u => {
-          if (u.role === "admin") return { ...u, pin: MASTER_ADMIN_PIN };
-          return u;
+          const base = { avatar: "", ...u };
+          if (base.role === "admin") return { ...base, pin: MASTER_ADMIN_PIN };
+          return base;
         });
         if (!registeredUsers.some(u => u.role === "admin")) {
           registeredUsers.unshift({
-            id: "USR-ADMIN", name: "Dueño / Admin", role: "admin", pin: MASTER_ADMIN_PIN, note: "Control total de la app", active: true
+            id: "USR-ADMIN", name: "Dueño / Admin", role: "admin", pin: MASTER_ADMIN_PIN, note: "Control total de la app", active: true, avatar: ""
           });
         }
       }
+      if (Array.isArray(parsed.deviceAccessLogs)) deviceAccessLogs = parsed.deviceAccessLogs;
       if (Array.isArray(parsed.locations) && parsed.locations.length) locations = parsed.locations;
       if (Array.isArray(parsed.prospects) && parsed.prospects.length) prospects = parsed.prospects;
       if (Array.isArray(parsed.activityLog) && parsed.activityLog.length) activityLog = parsed.activityLog;
@@ -1270,6 +1561,7 @@
     function loadState() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY)
+          || localStorage.getItem("oil_status_v9_state")
           || localStorage.getItem("oil_status_v8_state")
           || localStorage.getItem("oil_status_v7_state");
         if (raw) applyLoadedData(JSON.parse(raw));
@@ -1281,14 +1573,14 @@
       if (!clean) return null;
       if (clean === MASTER_ADMIN_PIN) {
         return registeredUsers.find(u => u.role === "admin") || {
-          id: "USR-ADMIN", name: "Dueño / Admin", role: "admin", pin: MASTER_ADMIN_PIN, note: "Control total", active: true
+          id: "USR-ADMIN", name: "Dueño / Admin", role: "admin", pin: MASTER_ADMIN_PIN, note: "Control total", active: true, avatar: ""
         };
       }
       return registeredUsers.find(u => u.role !== "admin" && u.active !== false && u.pin === clean) || null;
     }
 
     function pressKey(digit) {
-      if (tokenBuffer.length >= 6) return;
+      if (isLoggingIn || tokenBuffer.length >= 6) return;
       tokenBuffer += String(digit);
       tokenError = false;
       render();
@@ -1296,12 +1588,14 @@
     }
 
     function backspaceKey() {
+      if (isLoggingIn) return;
       tokenBuffer = tokenBuffer.slice(0, -1);
       tokenError = false;
       render();
     }
 
     function clearKey() {
+      if (isLoggingIn) return;
       tokenBuffer = "";
       tokenError = false;
       render();
@@ -1312,19 +1606,47 @@
       tokenError = false;
     }
 
+    function triggerOilFillTransition(userName, onDone) {
+      const overlay = document.getElementById("oilFillOverlay");
+      const label = document.getElementById("oilFillLabel");
+      if (!overlay) {
+        onDone();
+        return;
+      }
+      if (label) label.textContent = `Bienvenido, ${userName}`;
+      overlay.classList.remove("active");
+      void overlay.offsetWidth;
+      overlay.classList.add("active");
+
+      // Cambia la vista justo cuando el aceite cubre toda la pantalla
+      setTimeout(() => {
+        onDone();
+      }, 640);
+
+      setTimeout(() => {
+        overlay.classList.remove("active");
+        isLoggingIn = false;
+      }, 1280);
+    }
+
     function submitTokenPin(e) {
       if (e) e.preventDefault();
+      if (isLoggingIn) return;
       const inputEl = document.getElementById("adminTokenInput");
       const val = inputEl ? inputEl.value.trim() : tokenBuffer;
       const matched = findUserByPin(val);
       if (matched) {
-        currentSession = matched;
-        if (!isAdmin() && currentTab === "clientes") currentTab = "inicio";
-        tokenBuffer = "";
-        tokenError = false;
-        syncDrawerUI();
-        render(true);
-        notify(isAdmin() ? `Admin activo: ${matched.name}` : `Bienvenido: ${matched.name}`);
+        isLoggingIn = true;
+        recordDeviceLogin(matched);
+        triggerOilFillTransition(matched.name, () => {
+          currentSession = matched;
+          if (!isAdmin() && currentTab === "clientes") currentTab = "inicio";
+          tokenBuffer = "";
+          tokenError = false;
+          syncDrawerUI();
+          render(true);
+          notify(isAdmin() ? `Admin activo: ${matched.name}` : `Bienvenido: ${matched.name}`);
+        });
       } else {
         tokenError = true;
         tokenBuffer = "";
@@ -1338,9 +1660,17 @@
       currentSession = null;
       tokenBuffer = "";
       tokenError = false;
+      isLoggingIn = false;
       closeDrawer();
       render(true);
       notify("Sesión cerrada");
+    }
+
+    function toggleThemeFromLogin() {
+      appPrefs.dark = !appPrefs.dark;
+      saveState();
+      syncDrawerUI();
+      render();
     }
 
     function renderAuthGate() {
@@ -1349,6 +1679,13 @@
       return `
         <div class="auth-screen">
           <div class="auth-card">
+            <div class="auth-top-bar">
+              <button type="button" class="theme-pill-btn" onclick="toggleThemeFromLogin()" aria-label="Cambiar tema">
+                <span>${appPrefs.dark ? "🌙" : "☀️"}</span>
+                <span>${appPrefs.dark ? "Oscuro" : "Claro"}</span>
+              </button>
+            </div>
+
             <div class="auth-brand-row">
               <svg width="44" height="44" viewBox="0 0 32 32" fill="none" aria-hidden="true">
                 <rect width="32" height="32" rx="16" fill="#182230"/>
@@ -1392,6 +1729,55 @@
       `;
     }
 
+    // Registro de IP y Dispositivos (Solo Admin)
+    function openDeviceLogsModal() {
+      if (!isAdmin()) return;
+      closeDrawer();
+      renderDeviceLogsHtml();
+      document.getElementById("deviceLogsModal").classList.add("open");
+    }
+
+    function closeDeviceLogsModal() {
+      document.getElementById("deviceLogsModal").classList.remove("open");
+    }
+
+    function clearDeviceLogs() {
+      if (!isAdmin()) return;
+      deviceAccessLogs = [];
+      saveState();
+      syncDrawerUI();
+      renderDeviceLogsHtml();
+      notify("Historial de dispositivos limpiado");
+    }
+
+    function renderDeviceLogsHtml() {
+      const box = document.getElementById("deviceLogsContent");
+      if (!box) return;
+      box.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <h3 style="margin:0;">IP y Dispositivos</h3>
+          <button class="circle-btn" onclick="closeDeviceLogsModal()">✕</button>
+        </div>
+        <p class="muted" style="margin:0 0 12px;">Registro de accesos visible únicamente para el administrador.</p>
+
+        ${deviceAccessLogs.length ? deviceAccessLogs.map(log => `
+          <div class="user-row-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:4px;">
+              <strong>${esc(log.userName)}</strong>
+              <span class="badge ${log.role === "admin" ? "badge-gold" : "badge-teal"}">${esc(log.ip)}</span>
+            </div>
+            <div class="muted" style="margin-bottom:3px;">📱 ${esc(log.device)}</div>
+            <div class="muted" style="font-size:11px;">🕒 ${esc(log.timestamp)} • PIN ${esc(log.pin)}</div>
+          </div>
+        `).join("") : `<div class="card"><div class="muted">Aún no hay registros guardados.</div></div>`}
+
+        ${deviceAccessLogs.length ? `
+          <button class="btn-red" style="width:100%;margin-top:6px;" onclick="clearDeviceLogs()">Limpiar historial</button>
+        ` : ""}
+      `;
+    }
+
+    // Gestión de Usuarios y Fotos
     function openUsersManagerModal() {
       if (!isAdmin()) return;
       closeDrawer();
@@ -1401,6 +1787,37 @@
 
     function closeUsersManagerModal() {
       document.getElementById("usersManagerModal").classList.remove("open");
+    }
+
+    function pickAvatarForUser(userId) {
+      if (!isAdmin()) return;
+      avatarTargetUserId = userId;
+      const picker = document.getElementById("userAvatarPicker");
+      if (picker) picker.click();
+    }
+
+    async function handleTargetUserAvatar(event) {
+      const file = event.target.files && event.target.files[0];
+      event.target.value = "";
+      if (!file || !avatarTargetUserId) return;
+      try {
+        const dataUrl = await compressAvatarFile(file);
+        const u = registeredUsers.find(x => x.id === avatarTargetUserId);
+        if (u) {
+          u.avatar = dataUrl;
+          if (currentSession && currentSession.id === u.id) {
+            currentSession.avatar = dataUrl;
+          }
+          saveState();
+          syncDrawerUI();
+          renderUsersManagerHtml();
+          render();
+          notify(`Foto actualizada para ${u.name}`);
+        }
+      } catch (e) {
+        notify("No se pudo cargar la imagen");
+      }
+      avatarTargetUserId = null;
     }
 
     function renderUsersManagerHtml() {
@@ -1417,14 +1834,20 @@
           const isMaster = u.role === "admin";
           return `
             <div class="user-row-card">
-              <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:4px;">
-                <strong>${esc(u.name)}</strong>
-                <span class="badge ${isMaster ? "badge-gold" : u.active !== false ? "badge-teal" : "badge-red"}">
-                  ${isMaster ? "ADMIN • 4200" : (u.active !== false ? `PIN ${esc(u.pin)}` : "INACTIVO")}
-                </span>
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                <div class="avatar-circle">${getAvatarInnerHtml(u)}</div>
+                <div style="flex:1;min-width:0;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
+                    <strong style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(u.name)}</strong>
+                    <span class="badge ${isMaster ? "badge-gold" : u.active !== false ? "badge-teal" : "badge-red"}">
+                      ${isMaster ? "ADMIN • 4200" : (u.active !== false ? `PIN ${esc(u.pin)}` : "INACTIVO")}
+                    </span>
+                  </div>
+                  <div class="muted" style="margin-top:2px;">${esc(u.note || "Sin nota")}</div>
+                </div>
               </div>
-              <div class="muted" style="margin-bottom:8px;">${esc(u.note || "Sin nota")} • ${isMaster ? "Control total" : "Acceso limitado"}</div>
               <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <button class="btn-secondary" style="padding:6px 10px;font-size:11px;" onclick="pickAvatarForUser('${u.id}')">📷 Foto</button>
                 <button class="btn-secondary" style="padding:6px 10px;font-size:11px;" onclick="viewUserInfo('${u.id}')">Ver info</button>
                 ${!isMaster ? `
                   <button class="btn-secondary" style="padding:6px 10px;font-size:11px;" onclick="changeUserPinPrompt('${u.id}')">Cambiar PIN</button>
@@ -1446,14 +1869,10 @@
       const u = registeredUsers.find(x => x.id === id);
       if (!u) return;
       alert(
-        `Usuario: ${u.name}
-` +
-        `Rol: ${u.role === "admin" ? "Administrador (Control Total)" : "Usuario (Limitado)"}
-` +
-        `PIN: ${u.pin}
-` +
-        `Estado: ${u.active !== false ? "Activo" : "Inactivo"}
-` +
+        `Usuario: ${u.name}\n` +
+        `Rol: ${u.role === "admin" ? "Administrador (Control Total)" : "Usuario (Limitado)"}\n` +
+        `PIN: ${u.pin}\n` +
+        `Estado: ${u.active !== false ? "Activo" : "Inactivo"}\n` +
         `Nota: ${u.note || "—"}`
       );
     }
@@ -1499,14 +1918,28 @@
     function openNewUserModal() {
       if (!isAdmin()) return;
       closeDrawer();
+      pendingNewUserAvatar = "";
       document.getElementById("nuName").value = "";
       document.getElementById("nuPin").value = "";
       document.getElementById("nuNote").value = "";
+      document.getElementById("nuAvatarPreview").innerHTML = "U";
       document.getElementById("newUserModal").classList.add("open");
     }
 
     function closeNewUserModal() {
       document.getElementById("newUserModal").classList.remove("open");
+    }
+
+    async function handleNewUserAvatar(event) {
+      const file = event.target.files && event.target.files[0];
+      event.target.value = "";
+      if (!file) return;
+      try {
+        pendingNewUserAvatar = await compressAvatarFile(file);
+        document.getElementById("nuAvatarPreview").innerHTML = `<img src="${pendingNewUserAvatar}" alt="Preview" />`;
+      } catch (e) {
+        notify("No se pudo procesar la foto");
+      }
     }
 
     function createRegisteredUser() {
@@ -1524,8 +1957,10 @@
         role: "user",
         pin,
         note,
-        active: true
+        active: true,
+        avatar: pendingNewUserAvatar || ""
       });
+      pendingNewUserAvatar = "";
       saveState();
       closeNewUserModal();
       syncDrawerUI();
@@ -1553,6 +1988,8 @@
         const badge = document.getElementById("drawerRoleBadge");
         badge.textContent = admin ? "ADMIN • 4200" : `USUARIO • ${currentSession.pin}`;
         badge.className = `badge ${admin ? "badge-gold" : "badge-teal"}`;
+        const avatarWrap = document.getElementById("drawerAvatarWrap");
+        if (avatarWrap) avatarWrap.innerHTML = getAvatarInnerHtml(currentSession);
       }
 
       const adminSec = document.getElementById("adminUsersSection");
@@ -1560,6 +1997,9 @@
 
       const countLbl = document.getElementById("usersCountLabel");
       if (countLbl) countLbl.textContent = String(registeredUsers.length);
+
+      const devCountLbl = document.getElementById("deviceLogsCountLabel");
+      if (devCountLbl) devCountLbl.textContent = String(deviceAccessLogs.length);
 
       const savedLbl = document.getElementById("lastSavedLabel");
       if (savedLbl) savedLbl.textContent = lastSavedAt;
@@ -1609,13 +2049,36 @@
     function openProfileModal() {
       if (!currentSession) return;
       closeDrawer();
+      pendingProfileAvatar = currentSession.avatar || "";
       document.getElementById("pNameInput").value = currentSession.name;
       document.getElementById("pInfoInput").value = currentSession.note || "";
+      document.getElementById("profileAvatarPreview").innerHTML = getAvatarInnerHtml({
+        name: currentSession.name,
+        avatar: pendingProfileAvatar
+      });
       document.getElementById("profileModal").classList.add("open");
     }
 
     function closeProfileModal() {
       document.getElementById("profileModal").classList.remove("open");
+    }
+
+    async function handleProfileAvatarChange(event) {
+      const file = event.target.files && event.target.files[0];
+      event.target.value = "";
+      if (!file) return;
+      try {
+        pendingProfileAvatar = await compressAvatarFile(file);
+        document.getElementById("profileAvatarPreview").innerHTML = `<img src="${pendingProfileAvatar}" alt="Avatar" />`;
+      } catch (e) {
+        notify("No se pudo procesar la foto");
+      }
+    }
+
+    function removeProfileAvatar() {
+      pendingProfileAvatar = "";
+      const nameVal = document.getElementById("pNameInput").value.trim() || (currentSession ? currentSession.name : "U");
+      document.getElementById("profileAvatarPreview").textContent = nameVal.charAt(0).toUpperCase();
     }
 
     function saveProfile() {
@@ -1624,10 +2087,12 @@
       const info = document.getElementById("pInfoInput").value.trim();
       if (n) currentSession.name = n;
       currentSession.note = info;
+      currentSession.avatar = pendingProfileAvatar;
       const idx = registeredUsers.findIndex(u => u.id === currentSession.id);
       if (idx >= 0) {
         registeredUsers[idx].name = currentSession.name;
         registeredUsers[idx].note = currentSession.note;
+        registeredUsers[idx].avatar = currentSession.avatar;
       }
       saveState();
       syncDrawerUI();
@@ -2000,7 +2465,11 @@
 
     function initLeafletMap() {
       const box = document.getElementById("leafletMapBox");
-      if (!box || typeof L === "undefined") return;
+      if (!box) return;
+      if (typeof L === "undefined") {
+        box.innerHTML = `<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#cbd5e1;font-size:12px;padding:16px;text-align:center;">Mapa disponible con conexión a internet</div>`;
+        return;
+      }
       destroyLeafletMap();
       leafletMap = L.map("leafletMapBox", { center: [userCoords.lat, userCoords.lon], zoom: 12, zoomControl: true });
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "&copy; OpenStreetMap" }).addTo(leafletMap);
@@ -2034,7 +2503,10 @@
 
       return `
         <div class="soft-hero">
-          <span class="badge badge-gold">${isAdmin() ? "MODO ADMIN" : "MODO USUARIO"}</span>
+          <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px;">
+            <div class="avatar-circle sm">${getAvatarInnerHtml(currentSession)}</div>
+            <span class="badge badge-gold">${isAdmin() ? "MODO ADMIN" : "MODO USUARIO"}</span>
+          </div>
           <h2>Oil Status</h2>
           <p>${esc(currentSession ? currentSession.name : "")} • ${esc(lastSavedAt)}</p>
           <div class="pct-meter-row">
@@ -2290,155 +2762,7 @@
     loadState();
     syncDrawerUI();
     render(true);
- 
-  
-    container.innerHTML = contacts
-      .map(
-        (c, index) => `
-        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; background: #fff; border: 1px solid #e2e8f0;">
-          <div>
-            <div style="font-weight: 700; color: #0f172a;">${esc(c.restaurant)}</div>
-            <div style="font-size: 13px; color: #334155;">
-              Tel: <a href="tel:${esc(c.phone)}" style="color: #1d4ed8; font-weight: 600; text-decoration: none;">${esc(c.phone)}</a>
-              ${c.person ? ` · Encargado: ${esc(c.person)}` : ""}
-              ${c.zone ? ` · ${esc(c.zone)}` : ""}
-            </div>
-          </div>
-          <div style="display: flex; gap: 6px;">
-            <a href="tel:${esc(c.phone)}" style="padding: 6px 10px; border-radius: 6px; background: #0f766e; color: #fff; text-decoration: none; font-size: 12px; font-weight: 600;">
-              Llamar
-            </a>
-            <button type="button" onclick="window.__deleteRestaurantContact(${index})" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #ef4444; background: #fff; color: #ef4444; cursor: pointer; font-size: 12px;">
-              Borrar
-            </button>
-          </div>
-        </div>`
-      )
-      .join("");
-  }
-
-  window.__deleteRestaurantContact = function (index) {
-    const contacts = getContacts();
-    const removed = contacts[index];
-    if (!removed) return;
-    contacts.splice(index, 1);
-    saveContacts(contacts);
-    renderContacts();
-    logAction("Borrar contacto", `Contacto eliminado: ${removed.restaurant} (${removed.phone})`);
-  };
-
-  document.getElementById("btnOpenProfilesPanel")?.addEventListener("click", () => {
-    const box = document.getElementById("adminProfilesBox");
-    if (!box) return;
-    const willOpen = box.style.display === "none";
-    if (willOpen && !ensureAdminAccess()) return;
-    box.style.display = willOpen ? "block" : "none";
-    syncProfilesPrivacyUI();
-  });
-
-  document.getElementById("btnUnlockProfilesAdmin")?.addEventListener("click", () => {
-    if (ensureAdminAccess()) {
-      syncProfilesPrivacyUI();
-    }
-  });
-
-  document.getElementById("profPhotoInput")?.addEventListener("change", async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) {
-      pendingPhotoDataUrl = "";
-      return;
-    }
-    try {
-      pendingPhotoDataUrl = await compressImageFile(file);
-    } catch {
-      pendingPhotoDataUrl = "";
-      alert("No se pudo procesar la imagen.");
-    }
-  });
-
-  document.getElementById("profileForm")?.addEventListener("submit", (e) => {
-    e.preventDefault();
-    if (!ensureAdminAccess()) return;
-
-    const name = document.getElementById("profName").value.trim();
-    const phone = document.getElementById("profPhone").value.trim();
-    const role = document.getElementById("profRole").value.trim();
-    const email = document.getElementById("profEmail").value.trim();
-    const notes = document.getElementById("profNotes").value.trim();
-
-    if (!name || !phone) return;
-
-    const profiles = getProfiles();
-    const existingIdx = profiles.findIndex((p) => p.name.toLowerCase() === name.toLowerCase());
-    const entry = {
-      name,
-      phone,
-      role,
-      email,
-      notes,
-      photo: pendingPhotoDataUrl || (existingIdx >= 0 ? profiles[existingIdx].photo : "")
-    };
-
-    if (existingIdx >= 0) {
-      profiles[existingIdx] = entry;
-    } else {
-      profiles.push(entry);
-    }
-
-    saveProfiles(profiles);
-    renderProfiles();
-    e.target.reset();
-    pendingPhotoDataUrl = "";
-
-    logAction(
-      existingIdx >= 0 ? "Actualizar perfil" : "Crear perfil",
-      `Perfil: ${name} (${phone})`
-    );
-  });
-
-  document.getElementById("btnOpenContactsPanel")?.addEventListener("click", () => {
-    const box = document.getElementById("restaurantContactsBox");
-    if (!box) return;
-    box.style.display = box.style.display === "none" ? "block" : "none";
-    renderContacts();
-  });
-
-  document.getElementById("contactSearchInput")?.addEventListener("input", renderContacts);
-
-  document.getElementById("contactForm")?.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const restaurant = document.getElementById("contactRestaurant").value.trim();
-    const phone = document.getElementById("contactPhone").value.trim();
-    const person = document.getElementById("contactPerson").value.trim();
-    const zone = document.getElementById("contactZone").value.trim();
-
-    if (!restaurant || !phone) return;
-
-    const contacts = getContacts();
-    const existingIdx = contacts.findIndex(
-      (c) => c.restaurant.toLowerCase() === restaurant.toLowerCase()
-    );
-    const record = { restaurant, phone, person, zone };
-
-    if (existingIdx >= 0) {
-      contacts[existingIdx] = record;
-    } else {
-      contacts.push(record);
-    }
-
-    saveContacts(contacts);
-    renderContacts();
-    e.target.reset();
-
-    logAction(
-      existingIdx >= 0 ? "Actualizar contacto" : "Agendar contacto",
-      `${restaurant} · Tel: ${phone}${person ? " · " + person : ""}`
-    );
-  });
-
-  renderContacts();
-})();
-</script>
+  </script>
 </body>
-  
 </html>
+
